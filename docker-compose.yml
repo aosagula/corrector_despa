@@ -1,0 +1,86 @@
+version: '3.8'
+
+services:
+  # Base de datos MariaDB
+  db:
+    image: mariadb:11.0
+    container_name: corrector_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-password}
+      MYSQL_DATABASE: ${DB_NAME:-corrector_despa}
+      MYSQL_USER: ${DB_USER:-corrector}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-corrector123}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "3306:3306"
+    networks:
+      - corrector_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  # Ollama para ejecutar Phi-4
+  ollama:
+    image: ollama/ollama:latest
+    container_name: corrector_ollama
+    restart: unless-stopped
+    volumes:
+      - ollama_data:/root/.ollama
+    ports:
+      - "11434:11434"
+    networks:
+      - corrector_network
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    command: serve
+
+  # Backend FastAPI
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: corrector_backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: mysql+pymysql://${DB_USER:-corrector}:${DB_PASSWORD:-corrector123}@db:3306/${DB_NAME:-corrector_despa}
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-phi4}
+    volumes:
+      - ./backend/app:/app/app
+      - uploads_data:/app/uploads
+    ports:
+      - "8000:8000"
+    networks:
+      - corrector_network
+    depends_on:
+      db:
+        condition: service_healthy
+      ollama:
+        condition: service_started
+
+  # Frontend Nginx
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: corrector_frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    networks:
+      - corrector_network
+    depends_on:
+      - backend
+
+networks:
+  corrector_network:
+    driver: bridge
+
+volumes:
+  mariadb_data:
+  ollama_data:
+  uploads_data:
