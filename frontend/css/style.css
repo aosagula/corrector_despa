@@ -221,3 +221,119 @@ body {
         transform: rotate(360deg);
     }
 }
+
+/* Prompts Management Styles */
+.prompt-card {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    background-color: white;
+    transition: all 0.2s ease;
+}
+
+.prompt-card:hover {
+    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.1);
+}
+
+.prompt-card.active {
+    border-left: 4px solid #28a745;
+}
+
+.prompt-card.inactive {
+    border-left: 4px solid #6c757d;
+    opacity: 0.8;
+}
+
+.prompt-type-badge {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 500;
+}
+
+.prompt-type-classification {
+    background-color: #cfe2ff;
+    color: #084298;
+}
+
+.prompt-type-extraction {
+    background-color: #d1e7dd;
+    color: #0f5132;
+}
+
+.prompt-template-preview {
+    background-color: #f8f9fa;
+    border-left: 3px solid #0d6efd;
+    padding: 10px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    max-height: 150px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.prompt-variable-tag {
+    background-color: #fff3cd;
+    color: #664d03;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.prompt-actions {
+    display: flex;
+    gap: 5px;
+    justify-content: flex-end;
+}
+
+.font-monospace {
+    font-family: 'Courier New', Courier, monospace;
+}
+
+#promptTemplate {
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+.table-hover tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.modal-lg {
+    max-width: 900px;
+}
+
+/* Syntax highlighting for prompt template */
+.prompt-syntax-variable {
+    color: #d63384;
+    font-weight: 600;
+}
+
+.prompt-syntax-text {
+    color: #212529;
+}
+
+/* Status indicators */
+.status-active {
+    color: #28a745;
+}
+
+.status-inactive {
+    color: #6c757d;
+}
+
+/* Responsive improvements */
+@media (max-width: 768px) {
+    .prompt-actions {
+        flex-direction: column;
+    }
+
+    .btn-group-sm .btn {
+        font-size: 0.75rem;
+    }
+}
