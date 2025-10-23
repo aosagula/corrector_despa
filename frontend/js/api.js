@@ -211,4 +211,128 @@ class DocumentAPI {
 
         return await response.json();
     }
+
+    // Prompts
+    static async listPrompts(promptType = null, activeOnly = false) {
+        let url = getApiUrl('/prompts/');
+        const params = new URLSearchParams();
+
+        if (promptType) {
+            params.append('prompt_type', promptType);
+        }
+        if (activeOnly) {
+            params.append('active_only', 'true');
+        }
+
+        if (params.toString()) {
+            url += '?' + params.toString();
+        }
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error('Error fetching prompts');
+        }
+
+        return await response.json();
+    }
+
+    static async getPrompt(id) {
+        const response = await fetch(getApiUrl(`/prompts/${id}`));
+
+        if (!response.ok) {
+            throw new Error('Error fetching prompt');
+        }
+
+        return await response.json();
+    }
+
+    static async getPromptByName(name) {
+        const response = await fetch(getApiUrl(`/prompts/name/${name}`));
+
+        if (!response.ok) {
+            throw new Error('Error fetching prompt');
+        }
+
+        return await response.json();
+    }
+
+    static async getActiveClassificationPrompt() {
+        const response = await fetch(getApiUrl('/prompts/classification/active'));
+
+        if (!response.ok) {
+            throw new Error('No active classification prompt found');
+        }
+
+        return await response.json();
+    }
+
+    static async getActiveExtractionPrompt(documentType) {
+        const response = await fetch(getApiUrl(`/prompts/extraction/${documentType}/active`));
+
+        if (!response.ok) {
+            throw new Error(`No active extraction prompt found for ${documentType}`);
+        }
+
+        return await response.json();
+    }
+
+    static async createPrompt(promptData) {
+        const response = await fetch(getApiUrl('/prompts/'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(promptData)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Error creating prompt');
+        }
+
+        return await response.json();
+    }
+
+    static async updatePrompt(id, promptData) {
+        const response = await fetch(getApiUrl(`/prompts/${id}`), {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(promptData)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Error updating prompt');
+        }
+
+        return await response.json();
+    }
+
+    static async deletePrompt(id) {
+        const response = await fetch(getApiUrl(`/prompts/${id}`), {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            throw new Error('Error deleting prompt');
+        }
+
+        return await response.json();
+    }
+
+    static async initializeDefaultPrompts() {
+        const response = await fetch(getApiUrl('/prompts/initialize-defaults'), {
+            method: 'POST'
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Error initializing default prompts');
+        }
+
+        return await response.json();
+    }
 }

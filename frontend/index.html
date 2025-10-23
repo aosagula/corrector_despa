@@ -57,6 +57,12 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" id="prompts-tab" data-bs-toggle="pill"
+                           href="#prompts" role="tab">
+                            <i class="bi bi-chat-left-text"></i> Gestión de Prompts
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" id="history-tab" data-bs-toggle="pill"
                            href="#history" role="tab">
                             <i class="bi bi-clock-history"></i> Historial
@@ -253,6 +259,54 @@
                         </div>
                     </div>
 
+                    <!-- Prompts Management Tab -->
+                    <div class="tab-pane fade" id="prompts" role="tabpanel">
+                        <h2>Gestión de Prompts</h2>
+                        <p class="text-muted">Administra los prompts de clasificación y extracción de datos.</p>
+
+                        <!-- Filter and Actions -->
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <div class="row align-items-end">
+                                    <div class="col-md-4 mb-2">
+                                        <label for="promptTypeFilter" class="form-label">Filtrar por Tipo</label>
+                                        <select class="form-select" id="promptTypeFilter">
+                                            <option value="">Todos</option>
+                                            <option value="classification">Clasificación</option>
+                                            <option value="extraction">Extracción</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <div class="form-check mt-4">
+                                            <input class="form-check-input" type="checkbox" id="activeOnlyFilter">
+                                            <label class="form-check-label" for="activeOnlyFilter">
+                                                Solo activos
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-2">
+                                        <button type="button" class="btn btn-primary me-2" id="createPromptBtn">
+                                            <i class="bi bi-plus-circle"></i> Nuevo Prompt
+                                        </button>
+                                        <button type="button" class="btn btn-secondary" id="initDefaultPromptsBtn">
+                                            <i class="bi bi-download"></i> Inicializar Defaults
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Prompts List -->
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title">Prompts Configurados</h5>
+                                <div id="promptsList">
+                                    <p class="text-muted">Cargando prompts...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- History Tab -->
                     <div class="tab-pane fade" id="history" role="tabpanel">
                         <h2>Historial de Comparaciones</h2>
@@ -271,11 +325,104 @@
         </div>
     </div>
 
+    <!-- Prompt Modal -->
+    <div class="modal fade" id="promptModal" tabindex="-1" aria-labelledby="promptModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="promptModalLabel">Prompt</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="promptForm">
+                        <input type="hidden" id="promptId">
+
+                        <div class="mb-3">
+                            <label for="promptName" class="form-label">Nombre del Prompt</label>
+                            <input type="text" class="form-control" id="promptName" required>
+                            <small class="text-muted">Ej: extraction_factura_v2, classification_custom</small>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="promptType" class="form-label">Tipo</label>
+                                <select class="form-select" id="promptType" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="classification">Clasificación</option>
+                                    <option value="extraction">Extracción</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="promptDocumentType" class="form-label">Tipo de Documento</label>
+                                <select class="form-select" id="promptDocumentType">
+                                    <option value="">N/A (solo para extracción)</option>
+                                    <option value="factura">Factura</option>
+                                    <option value="orden_compra">Orden de Compra</option>
+                                    <option value="certificado_origen">Certificado de Origen</option>
+                                    <option value="especificacion_tecnica">Especificación Técnica</option>
+                                    <option value="contrato">Contrato</option>
+                                    <option value="remito">Remito</option>
+                                </select>
+                                <small class="text-muted">Requerido para prompts de extracción</small>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="promptTemplate" class="form-label">Template del Prompt</label>
+                            <textarea class="form-control font-monospace" id="promptTemplate" rows="12" required></textarea>
+                            <small class="text-muted">
+                                Variables disponibles: {text_content}, {document_type}
+                            </small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="promptDescription" class="form-label">Descripción</label>
+                            <textarea class="form-control" id="promptDescription" rows="2"></textarea>
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="promptIsActive">
+                            <label class="form-check-label" for="promptIsActive">
+                                Prompt activo
+                            </label>
+                            <small class="form-text d-block text-muted">
+                                Solo puede haber un prompt activo por tipo/documento
+                            </small>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="savePromptBtn">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Prompt Detail Modal -->
+    <div class="modal fade" id="promptDetailModal" tabindex="-1" aria-labelledby="promptDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="promptDetailModalLabel">Detalle del Prompt</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="promptDetailContent">
+                    <!-- Content will be filled by JavaScript -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom JS -->
     <script src="js/config.js"></script>
     <script src="js/api.js"></script>
+    <script src="js/prompts.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>
