@@ -65,3 +65,19 @@ class Comparison(Base):
     # Relaciones
     commercial_document = relationship("CommercialDocument", back_populates="comparisons")
     provisional_document = relationship("ProvisionalDocument", back_populates="comparisons")
+
+
+class PromptTemplate(Base):
+    """Modelo para plantillas de prompts configurables"""
+    __tablename__ = "prompt_templates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False, unique=True)
+    prompt_type = Column(String(50), nullable=False)  # classification, extraction
+    document_type = Column(String(100))  # null para classification, tipo específico para extraction
+    prompt_template = Column(Text, nullable=False)
+    description = Column(Text)
+    is_active = Column(Integer, default=1)  # 0=inactivo, 1=activo
+    variables = Column(JSON)  # Variables que el prompt puede usar: {text_content}, {document_type}, etc.
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
