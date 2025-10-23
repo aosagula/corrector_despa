@@ -60,12 +60,12 @@ async def upload_commercial_document(
             raise HTTPException(status_code=400, detail="No se pudo extraer texto del documento")
 
         # Clasificar documento
-        classification_result = llama_service.classify_document(text_content)
+        classification_result = llama_service.classify_document(text_content, db)
         document_type = classification_result.get("document_type", "desconocido")
         confidence = classification_result.get("confidence", 0.0)
 
         # Extraer datos estructurados
-        extracted_data = llama_service.extract_structured_data(text_content, document_type)
+        extracted_data = llama_service.extract_structured_data(text_content, document_type, db)
         extracted_data["classification_reasoning"] = classification_result.get("reasoning", "")
 
         # Guardar en base de datos
@@ -134,7 +134,7 @@ async def upload_provisional_document(
             raise HTTPException(status_code=400, detail="No se pudo extraer texto del documento")
 
         # Extraer datos estructurados (asumiendo que es una factura genérica)
-        extracted_data = llama_service.extract_structured_data(text_content, "factura")
+        extracted_data = llama_service.extract_structured_data(text_content, "factura", db)
 
         # Guardar en base de datos
         db_document = ProvisionalDocument(

@@ -108,3 +108,36 @@ class UploadResponse(BaseModel):
     document_type: Optional[str] = None
     extracted_data: Dict[str, Any]
     classification_confidence: Optional[float] = None
+
+
+class PromptTemplateBase(BaseModel):
+    name: str
+    prompt_type: str = Field(..., description="classification o extraction")
+    document_type: Optional[str] = Field(None, description="Tipo de documento para extraction, null para classification")
+    prompt_template: str = Field(..., description="Template del prompt con variables como {text_content}, {document_type}")
+    description: Optional[str] = None
+    is_active: int = Field(1, description="1=activo, 0=inactivo")
+    variables: Optional[Dict[str, Any]] = Field(None, description="Variables disponibles en el template")
+
+
+class PromptTemplateCreate(PromptTemplateBase):
+    pass
+
+
+class PromptTemplateUpdate(BaseModel):
+    name: Optional[str] = None
+    prompt_type: Optional[str] = None
+    document_type: Optional[str] = None
+    prompt_template: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[int] = None
+    variables: Optional[Dict[str, Any]] = None
+
+
+class PromptTemplateResponse(PromptTemplateBase):
+    id: int
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
