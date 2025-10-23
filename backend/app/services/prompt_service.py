@@ -2,7 +2,10 @@ from sqlalchemy.orm import Session
 from typing import List, Optional, Dict, Any
 from ..models.document import PromptTemplate
 from ..schemas.document import PromptTemplateCreate, PromptTemplateUpdate
+import logging
+import re
 
+logger = logging.getLogger(__name__)
 
 class PromptService:
     """Servicio para gestionar plantillas de prompts"""
@@ -88,16 +91,39 @@ class PromptService:
         Renderiza un template de prompt reemplazando las variables
 
         Args:
-            prompt_template: Template con variables como {text_content}, {document_type}
+            prompt_template: Template con variables como {{text_content}}, {{document_type}}
             variables: Diccionario con los valores de las variables
 
         Returns:
             Prompt renderizado con las variables reemplazadas
         """
         try:
-            return prompt_template.format(**variables)
-        except KeyError as e:
-            raise ValueError(f"Variable faltante en el template: {e}")
+            # Extraer variables esperadas del template: {{variable}}
+            expected_vars = re.findall(r'\{\{(\w+)\}\}', prompt_template)
+            logger.info(f"Variables esperadas en template: {expected_vars}")
+            logger.info(f"Variables proporcionadas: {list(variables.keys())}")
+
+            # Verificar variables faltantes
+            missing_vars = set(expected_vars) - set(variables.keys())
+            if missing_vars:
+                logger.error(f"Variables faltantes: {missing_vars}")
+                logger.error(f"Template (primeros 300 chars): {prompt_template[:300]}")
+                raise ValueError(f"Variables faltantes en el template: {missing_vars}")
+
+            # Reemplazar cada variable: {{var}} -> valor
+            rendered = prompt_template
+            for var_name, var_value in variables.items():
+                placeholder = "{{" + var_name + "}}"
+                rendered = rendered.replace(placeholder, str(var_value))
+
+            logger.info(f"Prompt renderizado exitosamente (length: {len(rendered)})")
+            return rendered
+
+        except Exception as e:
+            logger.exception(f"Error al renderizar template")
+            logger.error(f"Variables proporcionadas: {variables}")
+            logger.error(f"Template (primeros 500 chars): {prompt_template[:500]}")
+            raise
 
     @staticmethod
     def initialize_default_prompts(db: Session):
@@ -123,7 +149,7 @@ class PromptService:
 - otro
 
 Contenido del documento:
-{text_content}
+{{text_content}}
 
 Responde ÚNICAMENTE con un JSON en el siguiente formato:
 {{"document_type": "tipo_de_documento", "confidence": 0.95, "reasoning": "breve explicación"}}""",
@@ -180,7 +206,7 @@ Responde ÚNICAMENTE con un JSON en el siguiente formato:
 Campos a extraer: {', '.join(extraction_config["fields"])}
 
 Contenido del documento:
-{{text_content}}
+{{{{text_content}}}}
 
 Responde ÚNICAMENTE con un JSON con los campos encontrados. Si un campo no está presente, usa null.
 Formato de respuesta:

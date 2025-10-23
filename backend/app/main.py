@@ -3,11 +3,18 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 import os
+import logging
 
 from .core.config import settings
 from .core.database import engine, Base, SessionLocal
 from .api.routes import documents, comparisons, attributes, prompts
 from .services.prompt_service import PromptService
+
+# Configurar logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 # Configurar zona horaria
 os.environ['TZ'] = 'America/Argentina/Buenos_Aires'

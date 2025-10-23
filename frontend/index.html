@@ -356,12 +356,12 @@
                                 <label for="promptDocumentType" class="form-label">Tipo de Documento</label>
                                 <select class="form-select" id="promptDocumentType">
                                     <option value="">N/A (solo para extracción)</option>
-                                    <option value="factura">Factura</option>
-                                    <option value="orden_compra">Orden de Compra</option>
-                                    <option value="certificado_origen">Certificado de Origen</option>
-                                    <option value="especificacion_tecnica">Especificación Técnica</option>
-                                    <option value="contrato">Contrato</option>
-                                    <option value="remito">Remito</option>
+                                    <option value="invoice">Factura</option>
+                                    <option value="purchase_order">Orden de Compra</option>
+                                    <option value="certificate_of_origin">Certificado de Origen</option>
+                                    <option value="technical_specification">Especificación Técnica</option>
+                                    <option value="contract">Contrato</option>
+                                    <option value="certificate_of_analysis">Certificado de Análisis</option>
                                 </select>
                                 <small class="text-muted">Requerido para prompts de extracción</small>
                             </div>
@@ -371,7 +371,7 @@
                             <label for="promptTemplate" class="form-label">Template del Prompt</label>
                             <textarea class="form-control font-monospace" id="promptTemplate" rows="12" required></textarea>
                             <small class="text-muted">
-                                Variables disponibles: {text_content}, {document_type}
+                                Variables disponibles: {{text_content}}, {{document_type}}
                             </small>
                         </div>
 

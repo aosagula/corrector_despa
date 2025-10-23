@@ -29,6 +29,13 @@ services:
     image: ollama/ollama:latest
     container_name: corrector_ollama
     restart: unless-stopped
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
     volumes:
       - ollama_data:/root/.ollama
     ports:
@@ -37,6 +44,7 @@ services:
       - corrector_network
     environment:
       - OLLAMA_HOST=0.0.0.0
+      - NVIDIA_VISIBLE_DEVICES=all
     command: serve
 
   # Backend FastAPI

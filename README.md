@@ -73,7 +73,7 @@ docker exec -it corrector_ollama ollama pull phi3
 
 docker exec -it corrector_ollama ollama pull phi4
 
-docker exec -it corrector_ollama ollama pull phi4-mini-reasoning
+docker exec -it corrector_ollama ollama pull phi4-mini
 
 ```
 
