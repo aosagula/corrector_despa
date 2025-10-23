@@ -5,14 +5,28 @@ from pathlib import Path
 import os
 
 from .core.config import settings
-from .core.database import engine, Base
-from .api.routes import documents, comparisons, attributes
+from .core.database import engine, Base, SessionLocal
+from .api.routes import documents, comparisons, attributes, prompts
+from .services.prompt_service import PromptService
 
 # Configurar zona horaria
 os.environ['TZ'] = 'America/Argentina/Buenos_Aires'
 
 # Crear tablas en la base de datos
 Base.metadata.create_all(bind=engine)
+
+# Inicializar prompts por defecto
+def init_default_data():
+    """Inicializa datos por defecto en la base de datos"""
+    db = SessionLocal()
+    try:
+        PromptService.initialize_default_prompts(db)
+    except Exception as e:
+        print(f"Error inicializando prompts por defecto: {e}")
+    finally:
+        db.close()
+
+init_default_data()
 
 # Crear aplicación FastAPI
 app = FastAPI(
@@ -28,13 +42,16 @@ app = FastAPI(
     * **Documentos Provisorios**: Sube documentos para validar contra los comerciales
     * **Comparaciones**: Compara documentos y valida atributos configurables
     * **Atributos Configurables**: Define qué campos comparar y sus reglas de validación
+    * **Prompts Administrables**: Gestiona y personaliza los prompts de clasificación y extracción
 
     ### Flujo de trabajo:
 
-    1. Configura atributos con `/api/v1/attributes/defaults` (primera vez)
-    2. Sube documentos comerciales usando `/api/v1/documents/commercial`
-    3. Sube documentos provisorios usando `/api/v1/documents/provisional`
-    4. Compara documentos usando `/api/v1/comparisons/` o `/api/v1/comparisons/batch`
+    1. Inicializa prompts por defecto con `/api/v1/prompts/initialize-defaults` (primera vez)
+    2. Configura atributos con `/api/v1/attributes/defaults` (primera vez)
+    3. Sube documentos comerciales usando `/api/v1/documents/commercial`
+    4. Sube documentos provisorios usando `/api/v1/documents/provisional`
+    5. Compara documentos usando `/api/v1/comparisons/` o `/api/v1/comparisons/batch`
+    6. Personaliza prompts según tus necesidades con `/api/v1/prompts/`
     """,
     version="1.0.0",
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
@@ -68,6 +85,12 @@ app.include_router(
     attributes.router,
     prefix=f"{settings.API_V1_STR}/attributes",
     tags=["attributes"]
+)
+
+app.include_router(
+    prompts.router,
+    prefix=f"{settings.API_V1_STR}/prompts",
+    tags=["prompts"]
 )
 
 
