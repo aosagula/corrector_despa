@@ -67,7 +67,14 @@ docker-compose up -d
 
 ```bash
 # Esperar a que Ollama esté listo (puede tomar unos minutos)
+
+### !!!! Recordar cambiarlo en el .env !!! ###
+docker exec -it corrector_ollama ollama pull phi3
+
 docker exec -it corrector_ollama ollama pull phi4
+
+docker exec -it corrector_ollama ollama pull phi4-mini-reasoning
+
 ```
 
 **Nota:** La descarga del modelo Phi-4 puede tomar varios minutos dependiendo de tu conexión a internet (el modelo pesa varios GB).

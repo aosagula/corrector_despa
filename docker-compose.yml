@@ -11,6 +11,7 @@ services:
       MYSQL_DATABASE: ${DB_NAME:-corrector_despa}
       MYSQL_USER: ${DB_USER:-corrector}
       MYSQL_PASSWORD: ${DB_PASSWORD:-corrector123}
+      TZ: America/Argentina/Buenos_Aires
     volumes:
       - mariadb_data:/var/lib/mysql
       - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
@@ -19,7 +20,7 @@ services:
     networks:
       - corrector_network
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-u", "root", "-p${DB_ROOT_PASSWORD:-password}"]
       timeout: 20s
       retries: 10
 
@@ -46,9 +47,23 @@ services:
     container_name: corrector_backend
     restart: unless-stopped
     environment:
-      DATABASE_URL: mysql+pymysql://${DB_USER:-corrector}:${DB_PASSWORD:-corrector123}@db:3306/${DB_NAME:-corrector_despa}
+      # Database
+      DB_USER: ${DB_USER:-corrector}
+      DB_PASSWORD: ${DB_PASSWORD:-corrector123}
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-corrector_despa}
+      # Ollama
       OLLAMA_HOST: http://ollama:11434
-      OLLAMA_MODEL: ${OLLAMA_MODEL:-phi4}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-phi3}
+      # API
+      API_V1_STR: ${API_V1_STR:-/api/v1}
+      PROJECT_NAME: ${PROJECT_NAME:-Corrector de Documentos}
+      # Upload
+      UPLOAD_DIR: ${UPLOAD_DIR:-./uploads}
+      MAX_FILE_SIZE: ${MAX_FILE_SIZE:-10485760}
+      # Timezone
+      TIMEZONE: ${TIMEZONE:-America/Argentina/Buenos_Aires}
     volumes:
       - ./backend/app:/app/app
       - uploads_data:/app/uploads

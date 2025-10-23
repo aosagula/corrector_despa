@@ -1,11 +1,16 @@
 FROM python:3.11-slim
 
+# Configurar zona horaria
+ENV TZ=America/Argentina/Buenos_Aires
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 # Instalar dependencias del sistema
 RUN apt-get update && apt-get install -y \
     tesseract-ocr \
     tesseract-ocr-spa \
     tesseract-ocr-eng \
     poppler-utils \
+    tzdata \
     && rm -rf /var/lib/apt/lists/*
 
 # Configurar directorio de trabajo
