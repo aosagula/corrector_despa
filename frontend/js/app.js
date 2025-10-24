@@ -101,6 +101,7 @@ function setupCommercialUpload() {
         e.preventDefault();
 
         const fileInput = document.getElementById('commercialFile');
+        const referenceInput = document.getElementById('commercialReference');
         const file = fileInput.files[0];
 
         if (!file) {
@@ -112,11 +113,13 @@ function setupCommercialUpload() {
         hideAlert('commercialUploadResult');
 
         try {
-            const result = await DocumentAPI.uploadCommercialDocument(file);
+            const reference = referenceInput.value.trim() || null;
+            const result = await DocumentAPI.uploadCommercialDocument(file, reference);
 
             showProgress('commercialUploadProgress', false);
+            const referenceInfo = reference ? `<br>Referencia: ${reference}` : '';
             showAlert('commercialUploadResult',
-                `Documento subido exitosamente!<br>
+                `Documento subido exitosamente!${referenceInfo}<br>
                 Tipo: ${result.document_type}<br>
                 Confianza: ${(result.classification_confidence * 100).toFixed(1)}%`,
                 'success'
@@ -139,6 +142,7 @@ function setupProvisionalUpload() {
         e.preventDefault();
 
         const fileInput = document.getElementById('provisionalFile');
+        const referenceInput = document.getElementById('provisionalReference');
         const file = fileInput.files[0];
 
         if (!file) {
@@ -150,11 +154,13 @@ function setupProvisionalUpload() {
         hideAlert('provisionalUploadResult');
 
         try {
-            const result = await DocumentAPI.uploadProvisionalDocument(file);
+            const reference = referenceInput.value.trim() || null;
+            const result = await DocumentAPI.uploadProvisionalDocument(file, reference);
 
             showProgress('provisionalUploadProgress', false);
+            const referenceInfo = reference ? `<br>Referencia: ${reference}` : '';
             showAlert('provisionalUploadResult',
-                `Documento provisorio subido exitosamente!`,
+                `Documento provisorio subido exitosamente!${referenceInfo}`,
                 'success'
             );
 
@@ -214,12 +220,17 @@ function createDocumentCard(doc, type) {
         ? `<small class="text-muted">Confianza: ${(doc.classification_confidence * 100).toFixed(1)}%</small>`
         : '';
 
+    const referenceBadge = doc.reference
+        ? `<span class="badge bg-secondary ms-2"><i class="bi bi-tag"></i> ${doc.reference}</span>`
+        : '';
+
     return `
         <div class="document-item">
             <div class="d-flex justify-content-between align-items-start">
                 <div class="flex-grow-1">
                     <h6 class="mb-2">
                         <i class="bi bi-file-earmark-text"></i> ${doc.filename}
+                        ${referenceBadge}
                     </h6>
                     ${typeBadge} ${confidenceBadge}
                     <div class="mt-2">
@@ -344,14 +355,99 @@ async function populateComparisonSelects() {
         const commercialSelect = document.getElementById('selectCommercial');
         const provisionalSelect = document.getElementById('selectProvisional');
 
-        commercialSelect.innerHTML = '<option value="">Seleccionar...</option>' +
-            commercial.map(doc => `<option value="${doc.id}">${doc.filename} (${doc.document_type || 'N/A'})</option>`).join('');
+        // Crear opciones agrupadas por referencia
+        const commercialOptions = createDocumentOptions(commercial, true);
+        const provisionalOptions = createDocumentOptions(provisional, false);
 
-        provisionalSelect.innerHTML = '<option value="">Seleccionar...</option>' +
-            provisional.map(doc => `<option value="${doc.id}">${doc.filename}</option>`).join('');
+        commercialSelect.innerHTML = '<option value="">Seleccionar...</option>' + commercialOptions;
+        provisionalSelect.innerHTML = '<option value="">Seleccionar...</option>' + provisionalOptions;
+
+        // Agregar event listener para filtrar documentos provisionales según referencia del comercial
+        commercialSelect.addEventListener('change', function() {
+            filterProvisionalByReference(commercial, provisional);
+        });
     } catch (error) {
         console.error('Error loading documents for comparison:', error);
     }
+}
+
+function createDocumentOptions(documents, isCommercial) {
+    // Agrupar documentos por referencia
+    const grouped = {};
+    const noReference = [];
+
+    documents.forEach(doc => {
+        if (doc.reference) {
+            if (!grouped[doc.reference]) {
+                grouped[doc.reference] = [];
+            }
+            grouped[doc.reference].push(doc);
+        } else {
+            noReference.push(doc);
+        }
+    });
+
+    let html = '';
+
+    // Primero los grupos con referencia
+    Object.keys(grouped).sort().forEach(reference => {
+        html += `<optgroup label="Referencia: ${reference}">`;
+        grouped[reference].forEach(doc => {
+            const label = isCommercial
+                ? `${doc.filename} (${doc.document_type || 'N/A'})`
+                : doc.filename;
+            html += `<option value="${doc.id}" data-reference="${reference}">${label}</option>`;
+        });
+        html += '</optgroup>';
+    });
+
+    // Luego los documentos sin referencia
+    if (noReference.length > 0) {
+        html += '<optgroup label="Sin referencia">';
+        noReference.forEach(doc => {
+            const label = isCommercial
+                ? `${doc.filename} (${doc.document_type || 'N/A'})`
+                : doc.filename;
+            html += `<option value="${doc.id}" data-reference="">${label}</option>`;
+        });
+        html += '</optgroup>';
+    }
+
+    return html;
+}
+
+function filterProvisionalByReference(commercialDocs, provisionalDocs) {
+    const commercialSelect = document.getElementById('selectCommercial');
+    const provisionalSelect = document.getElementById('selectProvisional');
+
+    const selectedCommercialId = commercialSelect.value;
+
+    if (!selectedCommercialId) {
+        // Si no hay comercial seleccionado, mostrar todos los provisionales
+        provisionalSelect.innerHTML = '<option value="">Seleccionar...</option>' +
+            createDocumentOptions(provisionalDocs, false);
+        return;
+    }
+
+    // Encontrar el documento comercial seleccionado
+    const selectedCommercial = commercialDocs.find(doc => doc.id == selectedCommercialId);
+    const commercialReference = selectedCommercial ? selectedCommercial.reference : null;
+
+    // Filtrar provisionales con la misma referencia
+    let filteredProvisional = provisionalDocs;
+
+    if (commercialReference) {
+        filteredProvisional = provisionalDocs.filter(doc => doc.reference === commercialReference);
+
+        if (filteredProvisional.length === 0) {
+            provisionalSelect.innerHTML = '<option value="">No hay documentos provisionales con la misma referencia</option>';
+            showToast(`No hay documentos provisionales con la referencia "${commercialReference}"`, 'warning');
+            return;
+        }
+    }
+
+    provisionalSelect.innerHTML = '<option value="">Seleccionar...</option>' +
+        createDocumentOptions(filteredProvisional, false);
 }
 
 // Display Comparison Result

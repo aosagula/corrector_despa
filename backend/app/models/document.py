@@ -11,6 +11,7 @@ class CommercialDocument(Base):
     id = Column(Integer, primary_key=True, index=True)
     filename = Column(String(255), nullable=False)
     file_path = Column(String(500), nullable=False)
+    reference = Column(String(100), index=True)  # Referencia para agrupar documentos relacionados
     document_type = Column(String(100))  # factura, orden_compra, certificado, etc.
     classification_confidence = Column(Float)
     extracted_data = Column(JSON)  # Datos extraídos del documento
@@ -29,6 +30,7 @@ class ProvisionalDocument(Base):
     id = Column(Integer, primary_key=True, index=True)
     filename = Column(String(255), nullable=False)
     file_path = Column(String(500), nullable=False)
+    reference = Column(String(100), index=True)  # Referencia para agrupar documentos relacionados
     extracted_data = Column(JSON)  # Datos extraídos del documento
     text_content = Column(Text)  # Contenido de texto extraído del documento
     created_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -2,9 +2,12 @@
 
 class DocumentAPI {
     // Commercial Documents
-    static async uploadCommercialDocument(file) {
+    static async uploadCommercialDocument(file, reference = null) {
         const formData = new FormData();
         formData.append('file', file);
+        if (reference) {
+            formData.append('reference', reference);
+        }
 
         const response = await fetch(getApiUrl('/documents/commercial'), {
             method: 'POST',
@@ -12,8 +15,15 @@ class DocumentAPI {
         });
 
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'Error uploading document');
+            let errorMessage = 'Error uploading document';
+            try {
+                const error = await response.json();
+                errorMessage = error.detail || errorMessage;
+            } catch (e) {
+                // Si no se puede parsear el JSON, usar el texto de la respuesta
+                errorMessage = await response.text() || errorMessage;
+            }
+            throw new Error(errorMessage);
         }
 
         return await response.json();
@@ -52,9 +62,12 @@ class DocumentAPI {
     }
 
     // Provisional Documents
-    static async uploadProvisionalDocument(file) {
+    static async uploadProvisionalDocument(file, reference = null) {
         const formData = new FormData();
         formData.append('file', file);
+        if (reference) {
+            formData.append('reference', reference);
+        }
 
         const response = await fetch(getApiUrl('/documents/provisional'), {
             method: 'POST',
@@ -62,8 +75,15 @@ class DocumentAPI {
         });
 
         if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.detail || 'Error uploading document');
+            let errorMessage = 'Error uploading document';
+            try {
+                const error = await response.json();
+                errorMessage = error.detail || errorMessage;
+            } catch (e) {
+                // Si no se puede parsear el JSON, usar el texto de la respuesta
+                errorMessage = await response.text() || errorMessage;
+            }
+            throw new Error(errorMessage);
         }
 
         return await response.json();

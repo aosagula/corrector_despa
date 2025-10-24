@@ -26,6 +26,7 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 @router.post("/commercial", response_model=UploadResponse)
 async def upload_commercial_document(
     file: UploadFile = File(...),
+    reference: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
     """
@@ -35,6 +36,7 @@ async def upload_commercial_document(
     - Clasifica el tipo de documento usando Phi-4
     - Extrae datos estructurados
     - Guarda en la base de datos
+    - Opcionalmente asocia una referencia para agrupar documentos
     """
     # Validar extensión de archivo
     file_extension = Path(file.filename).suffix.lower()
@@ -72,6 +74,7 @@ async def upload_commercial_document(
         db_document = CommercialDocument(
             filename=file.filename,
             file_path=str(file_path),
+            reference=reference,
             document_type=document_type,
             classification_confidence=confidence,
             extracted_data=extracted_data,
@@ -102,6 +105,7 @@ async def upload_commercial_document(
 @router.post("/provisional", response_model=UploadResponse)
 async def upload_provisional_document(
     file: UploadFile = File(...),
+    reference: Optional[str] = Form(None),
     db: Session = Depends(get_db)
 ):
     """
@@ -110,6 +114,7 @@ async def upload_provisional_document(
     - Extrae el texto del documento
     - Extrae datos estructurados
     - Guarda en la base de datos
+    - Opcionalmente asocia una referencia para agrupar documentos
     """
     # Validar extensión de archivo
     file_extension = Path(file.filename).suffix.lower()
@@ -141,6 +146,7 @@ async def upload_provisional_document(
         db_document = ProvisionalDocument(
             filename=file.filename,
             file_path=str(file_path),
+            reference=reference,
             extracted_data=extracted_data,
             text_content=text_content
         )

@@ -19,6 +19,7 @@ async def create_comparison(
     Crea una nueva comparación entre un documento comercial y uno provisorio
 
     - Obtiene los datos de ambos documentos
+    - Valida que compartan la misma referencia (si está configurada)
     - Compara los atributos configurables
     - Guarda el resultado en la base de datos
     """
@@ -36,6 +37,16 @@ async def create_comparison(
 
     if not provisional_doc:
         raise HTTPException(status_code=404, detail="Documento provisorio no encontrado")
+
+    # Validar que compartan la misma referencia (si al menos uno tiene referencia)
+    if commercial_doc.reference or provisional_doc.reference:
+        if commercial_doc.reference != provisional_doc.reference:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Los documentos deben compartir la misma referencia. "
+                       f"Comercial: '{commercial_doc.reference or 'sin referencia'}', "
+                       f"Provisorio: '{provisional_doc.reference or 'sin referencia'}'"
+            )
 
     # Realizar la comparación
     comparison_result = comparison_service.compare_documents(
@@ -97,7 +108,10 @@ async def batch_comparison(
     db: Session = Depends(get_db)
 ):
     """
-    Compara un documento provisorio con todos los documentos comerciales
+    Compara un documento provisorio con documentos comerciales que compartan la misma referencia
+
+    Si el documento provisorio tiene referencia, solo compara con comerciales de la misma referencia.
+    Si no tiene referencia, compara con todos los comerciales sin referencia.
 
     Retorna todas las comparaciones realizadas
     """
@@ -109,11 +123,24 @@ async def batch_comparison(
     if not provisional_doc:
         raise HTTPException(status_code=404, detail="Documento provisorio no encontrado")
 
-    # Obtener todos los documentos comerciales
-    commercial_docs = db.query(CommercialDocument).all()
+    # Obtener documentos comerciales filtrados por referencia
+    query = db.query(CommercialDocument)
+
+    if provisional_doc.reference:
+        # Solo documentos con la misma referencia
+        query = query.filter(CommercialDocument.reference == provisional_doc.reference)
+    else:
+        # Solo documentos sin referencia
+        query = query.filter(CommercialDocument.reference.is_(None))
+
+    commercial_docs = query.all()
 
     if not commercial_docs:
-        raise HTTPException(status_code=404, detail="No hay documentos comerciales para comparar")
+        reference_msg = f"con la referencia '{provisional_doc.reference}'" if provisional_doc.reference else "sin referencia"
+        raise HTTPException(
+            status_code=404,
+            detail=f"No hay documentos comerciales {reference_msg} para comparar"
+        )
 
     results = []
 
@@ -139,6 +166,7 @@ async def batch_comparison(
             "comparison_id": None,  # Se asignará después del commit
             "commercial_document_id": commercial_doc.id,
             "commercial_document_type": commercial_doc.document_type,
+            "commercial_reference": commercial_doc.reference,
             "match_percentage": comparison_result["match_percentage"],
             "status": comparison_result["status"],
             "comparison_details": comparison_result["comparisons"]
@@ -146,7 +174,8 @@ async def batch_comparison(
 
     db.commit()
 
+    reference_info = f" con referencia '{provisional_doc.reference}'" if provisional_doc.reference else " sin referencia"
     return {
-        "message": f"Se realizaron {len(results)} comparaciones",
+        "message": f"Se realizaron {len(results)} comparaciones{reference_info}",
         "results": results
     }

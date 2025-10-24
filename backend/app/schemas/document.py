@@ -5,6 +5,7 @@ from datetime import datetime
 
 class CommercialDocumentBase(BaseModel):
     filename: str
+    reference: Optional[str] = None
     document_type: Optional[str] = None
     extracted_data: Optional[Dict[str, Any]] = None
 
@@ -26,6 +27,7 @@ class CommercialDocumentResponse(CommercialDocumentBase):
 
 class ProvisionalDocumentBase(BaseModel):
     filename: str
+    reference: Optional[str] = None
     extracted_data: Optional[Dict[str, Any]] = None
 
 

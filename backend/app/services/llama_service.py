@@ -43,6 +43,42 @@ class LlamaService:
         # Normalizar espacios en blanco
         text = re.sub(r'[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000]', ' ', text)
 
+        # Remover comentarios de JavaScript/C++ (// comentario)
+        # Solo remover si está fuera de strings
+        lines = text.split('\n')
+        cleaned_lines = []
+        for line in lines:
+            # Buscar // que no esté dentro de un string
+            in_string = False
+            escape_next = False
+            comment_start = -1
+
+            for i, char in enumerate(line):
+                if escape_next:
+                    escape_next = False
+                    continue
+                if char == '\\':
+                    escape_next = True
+                    continue
+                if char == '"' and not in_string:
+                    in_string = True
+                elif char == '"' and in_string:
+                    in_string = False
+                elif char == '/' and i + 1 < len(line) and line[i + 1] == '/' and not in_string:
+                    comment_start = i
+                    break
+
+            if comment_start >= 0:
+                cleaned_lines.append(line[:comment_start].rstrip())
+            else:
+                cleaned_lines.append(line)
+
+        text = '\n'.join(cleaned_lines)
+
+        # Remover expresiones JavaScript (ej: 2000 + (2 * 42) + 1)
+        # Reemplazar por null si está en contexto de valor
+        text = re.sub(r':\s*([0-9]+\s*[\+\-\*\/]\s*[0-9()\s\+\-\*\/]+)', ': null', text)
+
         # Convertir números mal formateados a strings
         # Solo números con comas DENTRO del número (ej: 1.234,56 o 30,40)
         # NO convertir números válidos como 0.95
@@ -165,19 +201,10 @@ Responde ÚNICAMENTE con un JSON en el siguiente formato:
             logger.error(f"Texto limpio que causó el error: {cleaned_text}")
             # Mostrar bytes para detectar caracteres invisibles
             logger.error(f"Bytes del texto limpio: {cleaned_text.encode('unicode_escape').decode('ascii')}")
-            return {
-                "error": str(e),
-                "classification_reasoning": "Error al parsear respuesta del modelo como JSON",
-                "raw_response": response_text[:1000],
-                "cleaned_response": cleaned_text[:1000]
-            }
+            raise ValueError(f"No se pudo parsear la respuesta del modelo como JSON: {str(e)}")
         except Exception as e:
             logger.exception(f"Error general en clasificación: {str(e)}")
-            return {
-                "document_type": "desconocido",
-                "confidence": 0.0,
-                "reasoning": f"Error: {str(e)}"
-            }
+            raise
 
     def extract_structured_data(self, text_content: str, document_type: str, db: Session) -> Dict[str, Any]:
         """
@@ -266,7 +293,7 @@ Responde ÚNICAMENTE con un JSON en el siguiente formato:
 
             if not response_text:
                 logger.error("El texto de respuesta está vacío después de extraer JSON")
-                return {"error": "La respuesta del modelo estaba vacía"}
+                raise ValueError("La respuesta del modelo estaba vacía")
 
             # Limpiar JSON antes de parsear
             cleaned_text = self.clean_json_response(response_text)
@@ -281,14 +308,10 @@ Responde ÚNICAMENTE con un JSON en el siguiente formato:
             logger.error(f"Texto original que causó el error: {response_text}")
             logger.error(f"Texto limpio que causó el error: {cleaned_text}")
             logger.error(f"Bytes del texto limpio: {cleaned_text.encode('unicode_escape').decode('ascii')}")
-            return {
-                "error": str(e),
-                "raw_response": response_text[:1000],
-                "cleaned_response": cleaned_text[:1000]
-            }
+            raise ValueError(f"No se pudo parsear la respuesta del modelo como JSON: {str(e)}")
         except Exception as e:
             logger.exception(f"Error general en extracción de datos: {str(e)}")
-            return {"error": str(e)}
+            raise
 
 
 llama_service = LlamaService()

@@ -84,6 +84,11 @@
                                 <h5 class="card-title">Subir Nuevo Documento</h5>
                                 <form id="commercialUploadForm">
                                     <div class="mb-3">
+                                        <label for="commercialReference" class="form-label">Referencia (opcional)</label>
+                                        <input class="form-control" type="text" id="commercialReference" placeholder="Ej: OC-2024-001, Lote-ABC">
+                                        <small class="text-muted">Identifica documentos relacionados para comparación</small>
+                                    </div>
+                                    <div class="mb-3">
                                         <label for="commercialFile" class="form-label">Seleccionar archivo (PDF, PNG, JPG)</label>
                                         <input class="form-control" type="file" id="commercialFile" accept=".pdf,.png,.jpg,.jpeg" required>
                                     </div>
@@ -122,6 +127,11 @@
                             <div class="card-body">
                                 <h5 class="card-title">Subir Documento Provisorio</h5>
                                 <form id="provisionalUploadForm">
+                                    <div class="mb-3">
+                                        <label for="provisionalReference" class="form-label">Referencia (opcional)</label>
+                                        <input class="form-control" type="text" id="provisionalReference" placeholder="Ej: OC-2024-001, Lote-ABC">
+                                        <small class="text-muted">Debe coincidir con la referencia del documento comercial</small>
+                                    </div>
                                     <div class="mb-3">
                                         <label for="provisionalFile" class="form-label">Seleccionar archivo (PDF, PNG, JPG)</label>
                                         <input class="form-control" type="file" id="provisionalFile" accept=".pdf,.png,.jpg,.jpeg" required>
