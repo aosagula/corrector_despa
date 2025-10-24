@@ -114,10 +114,12 @@ class PromptTemplateBase(BaseModel):
     name: str
     prompt_type: str = Field(..., description="classification o extraction")
     document_type: Optional[str] = Field(None, description="Tipo de documento para extraction, null para classification")
-    prompt_template: str = Field(..., description="Template del prompt con variables como {text_content}, {document_type}")
+    prompt_template: str = Field(..., description="Template del prompt con variables como {{text_content}}, {{document_type}}")
     description: Optional[str] = None
     is_active: int = Field(1, description="1=activo, 0=inactivo")
     variables: Optional[Dict[str, Any]] = Field(None, description="Variables disponibles en el template")
+    response_format: str = Field('text', description="Formato de respuesta: 'text' o 'json'")
+    json_schema: Optional[Dict[str, Any]] = Field(None, description="Esquema JSON de ejemplo si response_format='json'")
 
 
 class PromptTemplateCreate(PromptTemplateBase):
@@ -132,6 +134,8 @@ class PromptTemplateUpdate(BaseModel):
     description: Optional[str] = None
     is_active: Optional[int] = None
     variables: Optional[Dict[str, Any]] = None
+    response_format: Optional[str] = None
+    json_schema: Optional[Dict[str, Any]] = None
 
 
 class PromptTemplateResponse(PromptTemplateBase):

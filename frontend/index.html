@@ -382,6 +382,27 @@
                             <textarea class="form-control" id="promptDescription" rows="2"></textarea>
                         </div>
 
+                        <div class="mb-3">
+                            <label for="responseFormat" class="form-label">Formato de Respuesta</label>
+                            <select class="form-select" id="responseFormat">
+                                <option value="text">Texto</option>
+                                <option value="json">JSON</option>
+                            </select>
+                            <small class="text-muted">Formato esperado de la respuesta del modelo</small>
+                        </div>
+
+                        <div class="mb-3" id="jsonSchemaContainer" style="display: none;">
+                            <label for="jsonSchema" class="form-label">Esquema JSON de Ejemplo</label>
+                            <textarea class="form-control font-monospace" id="jsonSchema" rows="10" placeholder='{\n  "campo1": "valor1",\n  "campo2": 123,\n  "campo3": null\n}'></textarea>
+                            <small class="text-muted d-block mb-2">
+                                Define la estructura JSON que el modelo debe seguir
+                            </small>
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="validateJsonBtn">
+                                <i class="bi bi-check-circle"></i> Validar JSON
+                            </button>
+                            <span id="jsonValidationMessage" class="ms-2"></span>
+                        </div>
+
                         <div class="form-check mb-3">
                             <input class="form-check-input" type="checkbox" id="promptIsActive">
                             <label class="form-check-label" for="promptIsActive">

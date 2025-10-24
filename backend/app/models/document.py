@@ -80,6 +80,8 @@ class PromptTemplate(Base):
     prompt_template = Column(Text, nullable=False)
     description = Column(Text)
     is_active = Column(Integer, default=1)  # 0=inactivo, 1=activo
-    variables = Column(JSON)  # Variables que el prompt puede usar: {text_content}, {document_type}, etc.
+    variables = Column(JSON)  # Variables que el prompt puede usar: {{text_content}}, {{document_type}}, etc.
+    response_format = Column(String(20), default='text')  # 'text' o 'json'
+    json_schema = Column(JSON)  # Esquema JSON de ejemplo para la respuesta (si response_format='json')
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

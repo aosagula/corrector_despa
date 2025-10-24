@@ -44,17 +44,21 @@ class LlamaService:
         text = re.sub(r'[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000]', ' ', text)
 
         # Convertir números mal formateados a strings
-        # Patrón: números con comas como decimal o puntos como separadores de miles
+        # Solo números con comas DENTRO del número (ej: 1.234,56 o 30,40)
+        # NO convertir números válidos como 0.95
         def quote_malformed_number(match):
             value = match.group(1)
-            # Si tiene coma o más de un punto, es número mal formado → convertir a string
-            if ',' in value or value.count('.') > 1:
-                return f': "{value}"'
+            # Si tiene coma DENTRO (no al final) o más de un punto → es mal formado
+            if (',' in value and not value.endswith(',')) or value.count('.') > 1:
+                # Remover coma del final si existe
+                clean_value = value.rstrip(',')
+                return f': "{clean_value}"'
             # Si es un número válido con un solo punto, dejarlo como número
             return match.group(0)
 
-        # Buscar valores después de ":" que sean números (con o sin puntos/comas)
-        text = re.sub(r':\s*([\d.,]+)(?=\s*[,}\]\n])', quote_malformed_number, text)
+        # Buscar valores numéricos después de ":"
+        # Capturar solo dígitos, puntos y comas (sin incluir el delimitador siguiente)
+        text = re.sub(r':\s*([\d.,]+)', quote_malformed_number, text)
 
         # Remover trailing commas antes de } o ]
         text = re.sub(r',(\s*[}\]])', r'\1', text)
@@ -104,7 +108,12 @@ Responde ÚNICAMENTE con un JSON en el siguiente formato:
             variables = {
                 "text_content": text_content[:3000]
             }
-            prompt = PromptService.render_prompt(prompt_template.prompt_template, variables)
+            prompt = PromptService.render_prompt(
+                prompt_template.prompt_template,
+                variables,
+                response_format=prompt_template.response_format or 'text',
+                json_schema=prompt_template.json_schema
+            )
 
         logger.info(f"Clasificando documento con el siguiente prompt: {prompt}")
         try:
@@ -217,13 +226,15 @@ Responde ÚNICAMENTE con un JSON en el siguiente formato:
         else:
             # Usar el prompt de la BD
             variables = {
-                "text_content": text_content,
+                "text_content": text_content[:4000],
                 "document_type": document_type
             }
-            logger.info(f"Variables para renderizar prompt de extracción: {variables}")
-            logger.info(f"Prompt template para extracción: {prompt_template.prompt_template}")
-            prompt = PromptService.render_prompt(prompt_template.prompt_template, variables)
-            logger.info(f"prompt renderizado: {prompt}")
+            prompt = PromptService.render_prompt(
+                prompt_template.prompt_template,
+                variables,
+                response_format=prompt_template.response_format or 'text',
+                json_schema=prompt_template.json_schema
+            )
 
         try:
             logger.info(f"Extrayendo datos estructurados para documento tipo: {document_type}")

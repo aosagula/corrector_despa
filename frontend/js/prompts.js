@@ -61,6 +61,18 @@ class PromptsManager {
         if (promptType) {
             promptType.addEventListener('change', () => this.updateDocumentTypeField());
         }
+
+        // Response format change
+        const responseFormat = document.getElementById('responseFormat');
+        if (responseFormat) {
+            responseFormat.addEventListener('change', () => this.updateJsonSchemaField());
+        }
+
+        // JSON validation button
+        const validateJsonBtn = document.getElementById('validateJsonBtn');
+        if (validateJsonBtn) {
+            validateJsonBtn.addEventListener('click', () => this.validateJsonSchema());
+        }
     }
 
     async loadPrompts() {
@@ -227,7 +239,10 @@ class PromptsManager {
         document.getElementById('promptModalLabel').textContent = 'Nuevo Prompt';
         document.getElementById('promptForm').reset();
         document.getElementById('promptId').value = '';
+        document.getElementById('responseFormat').value = 'text';
+        document.getElementById('jsonSchema').value = '';
         this.updateDocumentTypeField();
+        this.updateJsonSchemaField();
         this.promptModal.show();
     }
 
@@ -244,8 +259,11 @@ class PromptsManager {
             document.getElementById('promptTemplate').value = prompt.prompt_template;
             document.getElementById('promptDescription').value = prompt.description || '';
             document.getElementById('promptIsActive').checked = prompt.is_active === 1;
+            document.getElementById('responseFormat').value = prompt.response_format || 'text';
+            document.getElementById('jsonSchema').value = prompt.json_schema ? JSON.stringify(prompt.json_schema, null, 2) : '';
 
             this.updateDocumentTypeField();
+            this.updateJsonSchemaField();
             this.promptModal.show();
         } catch (error) {
             console.error('Error loading prompt:', error);
@@ -340,6 +358,25 @@ class PromptsManager {
             return;
         }
 
+        const responseFormat = document.getElementById('responseFormat').value;
+        let jsonSchema = null;
+
+        // Validar JSON schema si el formato es JSON
+        if (responseFormat === 'json') {
+            const jsonSchemaText = document.getElementById('jsonSchema').value.trim();
+            if (!jsonSchemaText) {
+                this.showAlert('warning', 'Debes proporcionar un esquema JSON cuando el formato de respuesta es JSON');
+                return;
+            }
+
+            try {
+                jsonSchema = JSON.parse(jsonSchemaText);
+            } catch (e) {
+                this.showAlert('danger', `El esquema JSON no es válido: ${e.message}`);
+                return;
+            }
+        }
+
         const promptData = {
             name: document.getElementById('promptName').value.trim(),
             prompt_type: document.getElementById('promptType').value,
@@ -347,7 +384,9 @@ class PromptsManager {
             prompt_template: document.getElementById('promptTemplate').value,
             description: document.getElementById('promptDescription').value.trim() || null,
             is_active: document.getElementById('promptIsActive').checked ? 1 : 0,
-            variables: this.extractVariables()
+            variables: this.extractVariables(),
+            response_format: responseFormat,
+            json_schema: jsonSchema
         };
 
         // Validate extraction prompts have document_type
@@ -368,17 +407,17 @@ class PromptsManager {
 
             if (this.currentPromptId) {
                 await DocumentAPI.updatePrompt(this.currentPromptId, promptData);
-                this.showAlert('success', 'Prompt actualizado exitosamente');
+                showToast('Prompt actualizado exitosamente', 'success');
             } else {
                 await DocumentAPI.createPrompt(promptData);
-                this.showAlert('success', 'Prompt creado exitosamente');
+                showToast('Prompt creado exitosamente', 'success');
             }
 
             this.promptModal.hide();
             this.loadPrompts();
         } catch (error) {
             console.error('Error saving prompt:', error);
-            this.showAlert('danger', `Error guardando prompt: ${error.message}`);
+            showToast(`Error guardando prompt: ${error.message}`, 'error');
         } finally {
             const saveBtn = document.getElementById('savePromptBtn');
             saveBtn.disabled = false;
@@ -471,6 +510,41 @@ class PromptsManager {
         } else {
             documentTypeField.disabled = true;
             documentTypeField.required = false;
+        }
+    }
+
+    updateJsonSchemaField() {
+        const responseFormat = document.getElementById('responseFormat').value;
+        const jsonSchemaContainer = document.getElementById('jsonSchemaContainer');
+
+        if (responseFormat === 'json') {
+            jsonSchemaContainer.style.display = 'block';
+        } else {
+            jsonSchemaContainer.style.display = 'none';
+        }
+    }
+
+    validateJsonSchema() {
+        const jsonSchemaText = document.getElementById('jsonSchema').value.trim();
+        const messageElement = document.getElementById('jsonValidationMessage');
+
+        if (!jsonSchemaText) {
+            messageElement.innerHTML = '<span class="text-warning"><i class="bi bi-exclamation-triangle"></i> No hay JSON para validar</span>';
+            return;
+        }
+
+        try {
+            const parsed = JSON.parse(jsonSchemaText);
+            messageElement.innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i> JSON válido</span>';
+
+            // Formatear automáticamente el JSON
+            document.getElementById('jsonSchema').value = JSON.stringify(parsed, null, 2);
+
+            setTimeout(() => {
+                messageElement.innerHTML = '';
+            }, 3000);
+        } catch (e) {
+            messageElement.innerHTML = `<span class="text-danger"><i class="bi bi-x-circle-fill"></i> Error: ${e.message}</span>`;
         }
     }
 

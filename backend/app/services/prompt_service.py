@@ -86,16 +86,18 @@ class PromptService:
         return True
 
     @staticmethod
-    def render_prompt(prompt_template: str, variables: Dict[str, Any]) -> str:
+    def render_prompt(prompt_template: str, variables: Dict[str, Any], response_format: str = 'text', json_schema: Optional[Dict[str, Any]] = None) -> str:
         """
-        Renderiza un template de prompt reemplazando las variables
+        Renderiza un template de prompt reemplazando las variables y agregando formato de salida
 
         Args:
             prompt_template: Template con variables como {{text_content}}, {{document_type}}
             variables: Diccionario con los valores de las variables
+            response_format: Formato esperado de respuesta ('text' o 'json')
+            json_schema: Esquema JSON de ejemplo si response_format='json'
 
         Returns:
-            Prompt renderizado con las variables reemplazadas
+            Prompt renderizado con las variables reemplazadas y formato de salida
         """
         try:
             # Extraer variables esperadas del template: {{variable}}
@@ -115,6 +117,26 @@ class PromptService:
             for var_name, var_value in variables.items():
                 placeholder = "{{" + var_name + "}}"
                 rendered = rendered.replace(placeholder, str(var_value))
+
+            # Agregar instrucciones de formato JSON si es necesario
+            if response_format == 'json' and json_schema:
+                import json as json_module
+                schema_str = json_module.dumps(json_schema, indent=2, ensure_ascii=False)
+                format_instruction = f"""\n\n**IMPORTANTE: Formato de Respuesta**
+Debes responder ÚNICAMENTE con un JSON válido siguiendo exactamente este formato:
+
+```json
+{schema_str}
+```
+
+Reglas estrictas:
+- NO incluyas texto adicional antes o después del JSON
+- NO uses comentarios // en el JSON
+- Asegúrate de que todas las comillas y comas estén correctamente colocadas
+- Si un campo no tiene valor, usa null
+- Los números deben ser valores numéricos, no strings (a menos que el ejemplo lo muestre como string)
+"""
+                rendered += format_instruction
 
             logger.info(f"Prompt renderizado exitosamente (length: {len(rendered)})")
             return rendered
