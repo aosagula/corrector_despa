@@ -1,5 +1,63 @@
 // Main Application Logic
 
+// Toast Notification Function
+function showToast(message, type = 'success') {
+    const toastContainer = document.getElementById('toastContainer');
+    const toastId = `toast-${Date.now()}`;
+
+    const bgClass = type === 'success' ? 'bg-success' :
+                    type === 'error' ? 'bg-danger' :
+                    type === 'warning' ? 'bg-warning' : 'bg-info';
+
+    const toastHtml = `
+        <div id="${toastId}" class="toast align-items-center text-white ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="d-flex">
+                <div class="toast-body">
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+        </div>
+    `;
+
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+
+    const toastElement = document.getElementById(toastId);
+    const toast = new bootstrap.Toast(toastElement, {
+        autohide: true,
+        delay: 5000
+    });
+
+    toast.show();
+
+    // Remover del DOM después de ocultarse
+    toastElement.addEventListener('hidden.bs.toast', function() {
+        this.remove();
+    });
+}
+
+// Confirm Delete Modal Function
+function showConfirmDelete(message, onConfirm) {
+    const modal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+    const messageElement = document.getElementById('confirmDeleteMessage');
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+
+    // Actualizar mensaje
+    messageElement.textContent = message;
+
+    // Remover listeners anteriores clonando el botón
+    const newConfirmBtn = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
+
+    // Agregar nuevo listener
+    newConfirmBtn.addEventListener('click', function() {
+        modal.hide();
+        onConfirm();
+    });
+
+    modal.show();
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
 });
@@ -172,6 +230,9 @@ function createDocumentCard(doc, type) {
                     <button class="btn btn-sm btn-info" onclick="viewDocumentData(${doc.id}, '${type}')">
                         <i class="bi bi-eye"></i> Ver Datos
                     </button>
+                    <button class="btn btn-sm btn-primary" onclick="viewDocumentContent(${doc.id}, '${type}')">
+                        <i class="bi bi-file-text"></i> Ver Contenido
+                    </button>
                     <button class="btn btn-sm btn-danger" onclick="deleteDocument(${doc.id}, '${type}')">
                         <i class="bi bi-trash"></i>
                     </button>
@@ -196,23 +257,26 @@ function viewDocumentData(id, type) {
 
 // Delete Document
 async function deleteDocument(id, type) {
-    if (!confirm('¿Estás seguro de eliminar este documento?')) {
-        return;
-    }
+    const docType = type === 'commercial' ? 'comercial' : 'provisorio';
 
-    try {
-        if (type === 'commercial') {
-            await DocumentAPI.deleteCommercialDocument(id);
-            loadCommercialDocuments();
-        } else {
-            await DocumentAPI.deleteProvisionalDocument(id);
-            loadProvisionalDocuments();
+    showConfirmDelete(
+        `¿Estás seguro de que deseas eliminar este documento ${docType}?`,
+        async function() {
+            try {
+                if (type === 'commercial') {
+                    await DocumentAPI.deleteCommercialDocument(id);
+                    loadCommercialDocuments();
+                } else {
+                    await DocumentAPI.deleteProvisionalDocument(id);
+                    loadProvisionalDocuments();
+                }
+
+                showToast('Documento eliminado exitosamente', 'success');
+            } catch (error) {
+                showToast(`Error eliminando documento: ${error.message}`, 'error');
+            }
         }
-
-        alert('Documento eliminado exitosamente');
-    } catch (error) {
-        alert(`Error eliminando documento: ${error.message}`);
-    }
+    );
 }
 
 // Comparison Setup
@@ -421,21 +485,21 @@ function setupAttributes() {
 
         try {
             await DocumentAPI.createAttribute(attributeData);
-            alert('Atributo creado exitosamente');
+            showToast('Atributo creado exitosamente', 'success');
             form.reset();
             loadAttributes();
         } catch (error) {
-            alert(`Error creando atributo: ${error.message}`);
+            showToast(`Error creando atributo: ${error.message}`, 'error');
         }
     });
 
     defaultsBtn.addEventListener('click', async function() {
         try {
             const result = await DocumentAPI.createDefaultAttributes();
-            alert(result.message);
+            showToast(result.message, 'success');
             loadAttributes();
         } catch (error) {
-            alert(`Error creando atributos por defecto: ${error.message}`);
+            showToast(`Error creando atributos por defecto: ${error.message}`, 'error');
         }
     });
 }
@@ -472,17 +536,18 @@ async function loadAttributes() {
 
 // Delete Attribute
 async function deleteAttribute(id) {
-    if (!confirm('¿Estás seguro de eliminar este atributo?')) {
-        return;
-    }
-
-    try {
-        await DocumentAPI.deleteAttribute(id);
-        alert('Atributo eliminado exitosamente');
-        loadAttributes();
-    } catch (error) {
-        alert(`Error eliminando atributo: ${error.message}`);
-    }
+    showConfirmDelete(
+        '¿Estás seguro de que deseas eliminar este atributo?',
+        async function() {
+            try {
+                await DocumentAPI.deleteAttribute(id);
+                showToast('Atributo eliminado exitosamente', 'success');
+                loadAttributes();
+            } catch (error) {
+                showToast(`Error eliminando atributo: ${error.message}`, 'error');
+            }
+        }
+    );
 }
 
 // Load History
@@ -569,4 +634,71 @@ function getStatusText(status) {
         case 'pending_review': return 'Revisión Pendiente';
         default: return status;
     }
+}
+
+// View Document Content
+async function viewDocumentContent(docId, type) {
+    try {
+        const endpoint = type === 'commercial'
+            ? `/documents/commercial/${docId}/content`
+            : `/documents/provisional/${docId}/content`;
+
+        const url = getApiUrl(endpoint);
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Error obteniendo contenido del documento');
+
+        const data = await response.json();
+
+        // Mostrar en modal
+        showContentModal(data);
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error al obtener el contenido del documento: ' + error.message, 'error');
+    }
+}
+
+function showContentModal(data) {
+    const modalHtml = `
+        <div class="modal fade" id="contentModal" tabindex="-1" aria-labelledby="contentModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="contentModalLabel">
+                            <i class="bi bi-file-text"></i> Contenido del Documento
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <h6><strong>Archivo:</strong> ${data.filename}</h6>
+                        ${data.document_type ? `<p><strong>Tipo:</strong> ${data.document_type}</p>` : ''}
+                        <hr>
+                        <div style="max-height: 500px; overflow-y: auto;">
+                            <pre style="white-space: pre-wrap; word-wrap: break-word;">${data.text_content}</pre>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+
+    // Remover modal anterior si existe
+    const existingModal = document.getElementById('contentModal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+
+    // Agregar modal al DOM
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('contentModal'));
+    modal.show();
+
+    // Limpiar modal al cerrar
+    document.getElementById('contentModal').addEventListener('hidden.bs.modal', function () {
+        this.remove();
+    });
 }

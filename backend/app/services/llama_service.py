@@ -31,16 +31,23 @@ class LlamaService:
         # Remover texto antes/después del JSON
         text = text.strip()
 
+        # Reemplazar comillas tipográficas por comillas normales
+        # " " → " (U+201C, U+201D → U+0022)
+        # ' ' → ' (U+2018, U+2019 → U+0027)
+        text = text.replace('"', '"').replace('"', '"')
+        text = text.replace(''', "'").replace(''', "'")
+
+        # Remover caracteres de control invisibles (excepto \n, \r, \t)
+        text = ''.join(char for char in text if ord(char) >= 32 or char in '\n\r\t')
+
+        # Normalizar espacios en blanco
+        text = re.sub(r'[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000]', ' ', text)
+
         # Convertir números mal formateados a strings
         # Patrón: números con comas como decimal o puntos como separadores de miles
-        # 93.443,20 -> "93.443,20"
-        # 62.800,00 -> "62.800,00"
-        # 30,40 -> "30,40"
-
-        # Buscar números mal formados (con comas o múltiples puntos) y convertirlos a strings
         def quote_malformed_number(match):
             value = match.group(1)
-            # Si tiene coma o más de un punto, es número mal formado -> convertir a string
+            # Si tiene coma o más de un punto, es número mal formado → convertir a string
             if ',' in value or value.count('.') > 1:
                 return f': "{value}"'
             # Si es un número válido con un solo punto, dejarlo como número
@@ -54,6 +61,9 @@ class LlamaService:
 
         # Remover espacios en claves de objetos (ej: "item.name" : -> "item.name":)
         text = re.sub(r'"\s+:', r'":', text)
+
+        # Remover espacios antes de comas
+        text = re.sub(r'\s+,', ',', text)
 
         logger.debug(f"JSON después de limpieza: {text[:300]}")
         return text
@@ -142,11 +152,15 @@ Responde ÚNICAMENTE con un JSON en el siguiente formato:
 
         except json.JSONDecodeError as e:
             logger.exception(f"Error de JSON decode: {str(e)}")
-            logger.error(f"Texto que causó el error: {response_text}")
+            logger.error(f"Texto original que causó el error: {response_text}")
+            logger.error(f"Texto limpio que causó el error: {cleaned_text}")
+            # Mostrar bytes para detectar caracteres invisibles
+            logger.error(f"Bytes del texto limpio: {cleaned_text.encode('unicode_escape').decode('ascii')}")
             return {
                 "error": str(e),
                 "classification_reasoning": "Error al parsear respuesta del modelo como JSON",
-                "raw_response": response_text[:1000]
+                "raw_response": response_text[:1000],
+                "cleaned_response": cleaned_text[:1000]
             }
         except Exception as e:
             logger.exception(f"Error general en clasificación: {str(e)}")
@@ -223,7 +237,7 @@ Responde ÚNICAMENTE con un JSON en el siguiente formato:
             )
 
             response_text = response['response'].strip()
-            logger.info(f"Respuesta raw extracción (primeros 500 chars): {response_text[:500]}")
+            logger.info(f"Respuesta raw extracción (primeros 500 chars): {response_text}")
 
             # Extraer JSON
             if '```json' in response_text:
@@ -253,10 +267,13 @@ Responde ÚNICAMENTE con un JSON en el siguiente formato:
 
         except json.JSONDecodeError as e:
             logger.exception(f"Error de JSON decode en extracción: {str(e)}")
-            logger.error(f"Texto que causó el error: {response_text}")
+            logger.error(f"Texto original que causó el error: {response_text}")
+            logger.error(f"Texto limpio que causó el error: {cleaned_text}")
+            logger.error(f"Bytes del texto limpio: {cleaned_text.encode('unicode_escape').decode('ascii')}")
             return {
                 "error": str(e),
-                "raw_response": response_text[:1000]
+                "raw_response": response_text[:1000],
+                "cleaned_response": cleaned_text[:1000]
             }
         except Exception as e:
             logger.exception(f"Error general en extracción de datos: {str(e)}")

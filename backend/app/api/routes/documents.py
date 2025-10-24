@@ -74,7 +74,8 @@ async def upload_commercial_document(
             file_path=str(file_path),
             document_type=document_type,
             classification_confidence=confidence,
-            extracted_data=extracted_data
+            extracted_data=extracted_data,
+            text_content=text_content
         )
 
         db.add(db_document)
@@ -140,7 +141,8 @@ async def upload_provisional_document(
         db_document = ProvisionalDocument(
             filename=file.filename,
             file_path=str(file_path),
-            extracted_data=extracted_data
+            extracted_data=extracted_data,
+            text_content=text_content
         )
 
         db.add(db_document)
@@ -258,3 +260,40 @@ async def delete_provisional_document(
     db.commit()
 
     return {"message": "Documento eliminado exitosamente"}
+
+
+@router.get("/commercial/{document_id}/content")
+async def get_commercial_document_content(
+    document_id: int,
+    db: Session = Depends(get_db)
+):
+    """Obtiene el contenido de texto extraído de un documento comercial"""
+    document = db.query(CommercialDocument).filter(CommercialDocument.id == document_id).first()
+
+    if not document:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+
+    return {
+        "document_id": document.id,
+        "filename": document.filename,
+        "document_type": document.document_type,
+        "text_content": document.text_content or "No hay contenido de texto disponible"
+    }
+
+
+@router.get("/provisional/{document_id}/content")
+async def get_provisional_document_content(
+    document_id: int,
+    db: Session = Depends(get_db)
+):
+    """Obtiene el contenido de texto extraído de un documento provisorio"""
+    document = db.query(ProvisionalDocument).filter(ProvisionalDocument.id == document_id).first()
+
+    if not document:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+
+    return {
+        "document_id": document.id,
+        "filename": document.filename,
+        "text_content": document.text_content or "No hay contenido de texto disponible"
+    }

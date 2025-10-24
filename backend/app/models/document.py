@@ -14,6 +14,7 @@ class CommercialDocument(Base):
     document_type = Column(String(100))  # factura, orden_compra, certificado, etc.
     classification_confidence = Column(Float)
     extracted_data = Column(JSON)  # Datos extraídos del documento
+    text_content = Column(Text)  # Contenido de texto extraído del documento
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -29,6 +30,7 @@ class ProvisionalDocument(Base):
     filename = Column(String(255), nullable=False)
     file_path = Column(String(500), nullable=False)
     extracted_data = Column(JSON)  # Datos extraídos del documento
+    text_content = Column(Text)  # Contenido de texto extraído del documento
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
