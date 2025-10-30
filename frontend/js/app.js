@@ -244,6 +244,11 @@ function createDocumentCard(doc, type) {
                     <button class="btn btn-sm btn-primary" onclick="viewDocumentContent(${doc.id}, '${type}')">
                         <i class="bi bi-file-text"></i> Ver Contenido
                     </button>
+                    ${type === 'provisional' ? `
+                    <button class="btn btn-sm btn-success" onclick="viewDocumentImages(${doc.id})">
+                        <i class="bi bi-images"></i> Ver Imágenes
+                    </button>
+                    ` : ''}
                     <button class="btn btn-sm btn-danger" onclick="deleteDocument(${doc.id}, '${type}')">
                         <i class="bi bi-trash"></i>
                     </button>
@@ -797,4 +802,73 @@ function showContentModal(data) {
     document.getElementById('contentModal').addEventListener('hidden.bs.modal', function () {
         this.remove();
     });
+}
+
+// View Document Images
+async function viewDocumentImages(docId) {
+    try {
+        const data = await DocumentAPI.getProvisionalDocumentImages(docId);
+
+        const imagesHtml = data.images.map(img => `
+            <div class="col-md-6 mb-3">
+                <div class="card">
+                    <div class="card-header">
+                        <strong>Página ${img.page_number}</strong>
+                        <small class="text-muted">(${img.width}x${img.height}px)</small>
+                    </div>
+                    <div class="card-body text-center">
+                        <img src="${DocumentAPI.getProvisionalDocumentImageUrl(docId, img.page_number)}"
+                             class="img-fluid border"
+                             alt="Página ${img.page_number}"
+                             style="max-height: 500px;">
+                    </div>
+                </div>
+            </div>
+        `).join('');
+
+        const modalHtml = `
+            <div class="modal fade" id="imagesModal" tabindex="-1" aria-labelledby="imagesModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-xl">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="imagesModalLabel">
+                                <i class="bi bi-images"></i> Imágenes del Documento - ${data.filename}
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <p><strong>Total de páginas:</strong> ${data.total_pages}</p>
+                            <div class="row">
+                                ${imagesHtml}
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Remover modal anterior si existe
+        const existingModal = document.getElementById('imagesModal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Agregar modal al DOM
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Mostrar modal
+        const modal = new bootstrap.Modal(document.getElementById('imagesModal'));
+        modal.show();
+
+        // Limpiar modal al cerrar
+        document.getElementById('imagesModal').addEventListener('hidden.bs.modal', function () {
+            this.remove();
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error al obtener las imágenes del documento: ' + error.message, 'error');
+    }
 }

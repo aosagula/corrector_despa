@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text, JSON, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Text, JSON, Float, ForeignKey, LargeBinary
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from ..core.database import Base
@@ -42,6 +42,7 @@ class ProvisionalDocument(Base):
 
     # Relaciones
     comparisons = relationship("Comparison", back_populates="provisional_document")
+    images = relationship("ProvisionalDocumentImage", back_populates="document", cascade="all, delete-orphan")
 
 
 class ConfigurableAttribute(Base):
@@ -73,6 +74,39 @@ class Comparison(Base):
     # Relaciones
     commercial_document = relationship("CommercialDocument", back_populates="comparisons")
     provisional_document = relationship("ProvisionalDocument", back_populates="comparisons")
+
+
+class ProvisionalDocumentImage(Base):
+    """Modelo para imágenes de documentos provisorios (una imagen por página)"""
+    __tablename__ = "provisional_document_images"
+
+    id = Column(Integer, primary_key=True, index=True)
+    provisional_document_id = Column(Integer, ForeignKey("provisional_documents.id"), nullable=False)
+    page_number = Column(Integer, nullable=False)  # Número de página (1-based)
+    image_data = Column(LargeBinary, nullable=False)  # Imagen en formato PNG B&N 300 DPI
+    width = Column(Integer)  # Ancho de la imagen en píxeles
+    height = Column(Integer)  # Alto de la imagen en píxeles
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relaciones
+    document = relationship("ProvisionalDocument", back_populates="images")
+
+
+class AttributeExtractionCoordinate(Base):
+    """Modelo para coordenadas de extracción de atributos"""
+    __tablename__ = "attribute_extraction_coordinates"
+
+    id = Column(Integer, primary_key=True, index=True)
+    attribute_id = Column(Integer, ForeignKey("configurable_attributes.id"), nullable=False)
+    page_number = Column(Integer, nullable=False)  # Número de página donde se encuentra el atributo
+    x1 = Column(Integer, nullable=False)  # Coordenada superior izquierda X
+    y1 = Column(Integer, nullable=False)  # Coordenada superior izquierda Y
+    x2 = Column(Integer, nullable=False)  # Coordenada inferior derecha X
+    y2 = Column(Integer, nullable=False)  # Coordenada inferior derecha Y
+    label = Column(String(100), nullable=False)  # Nombre del atributo para esta coordenada
+    description = Column(Text)  # Descripción de qué se extrae en esta área
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
 
 class PromptTemplate(Base):

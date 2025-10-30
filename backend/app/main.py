@@ -10,7 +10,7 @@ import traceback
 
 from .core.config import settings
 from .core.database import engine, Base, SessionLocal
-from .api.routes import documents, comparisons, attributes, prompts
+from .api.routes import documents, comparisons, attributes, prompts, coordinates
 from .services.prompt_service import PromptService
 
 # Configurar logging
@@ -152,6 +152,12 @@ app.include_router(
     prompts.router,
     prefix=f"{settings.API_V1_STR}/prompts",
     tags=["prompts"]
+)
+
+app.include_router(
+    coordinates.router,
+    prefix=f"{settings.API_V1_STR}/coordinates",
+    tags=["coordinates"]
 )
 
 

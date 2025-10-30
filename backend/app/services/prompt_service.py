@@ -145,19 +145,19 @@ class PromptService:
                 import json as json_module
                 schema_str = json_module.dumps(json_schema, indent=2, ensure_ascii=False)
                 format_instruction = f"""\n\n**IMPORTANTE: Formato de Respuesta**
-Debes responder ÚNICAMENTE con un JSON válido siguiendo exactamente este formato:
+                                    Debes responder ÚNICAMENTE con un JSON válido siguiendo exactamente este formato:
 
-```json
-{schema_str}
-```
+                                    ```json
+                                    {schema_str}
+                                    ```
 
-Reglas estrictas:
-- NO incluyas texto adicional antes o después del JSON
-- NO uses comentarios // en el JSON
-- Asegúrate de que todas las comillas y comas estén correctamente colocadas
-- Si un campo no tiene valor, usa null
-- Los números deben ser valores numéricos, no strings (a menos que el ejemplo lo muestre como string)
-"""
+                                    Reglas estrictas:
+                                    - NO incluyas texto adicional antes o después del JSON
+                                    - NO uses comentarios // en el JSON
+                                    - Asegúrate de que todas las comillas y comas estén correctamente colocadas
+                                    - Si un campo no tiene valor, usa null
+                                    - Los números deben ser valores numéricos, no strings (a menos que el ejemplo lo muestre como string)
+                                    """
                 rendered += format_instruction
 
             # Agregar instrucción de idioma

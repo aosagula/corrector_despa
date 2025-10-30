@@ -355,4 +355,103 @@ class DocumentAPI {
 
         return await response.json();
     }
+
+    // Provisional Document Images
+    static async getProvisionalDocumentImages(documentId) {
+        const response = await fetch(getApiUrl(`/documents/provisional/${documentId}/images`));
+
+        if (!response.ok) {
+            throw new Error('Error fetching document images');
+        }
+
+        return await response.json();
+    }
+
+    static getProvisionalDocumentImageUrl(documentId, pageNumber) {
+        return getApiUrl(`/documents/provisional/${documentId}/images/${pageNumber}`);
+    }
+
+    // Coordinates
+    static async createCoordinate(coordinateData) {
+        const response = await fetch(getApiUrl('/coordinates/'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(coordinateData)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Error creating coordinate');
+        }
+
+        return await response.json();
+    }
+
+    static async listCoordinates(attributeId = null, pageNumber = null) {
+        let url = getApiUrl('/coordinates/');
+        const params = new URLSearchParams();
+
+        if (attributeId) {
+            params.append('attribute_id', attributeId);
+        }
+        if (pageNumber) {
+            params.append('page_number', pageNumber);
+        }
+
+        if (params.toString()) {
+            url += '?' + params.toString();
+        }
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error('Error fetching coordinates');
+        }
+
+        return await response.json();
+    }
+
+    static async updateCoordinate(coordinateId, coordinateData) {
+        const response = await fetch(getApiUrl(`/coordinates/${coordinateId}`), {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(coordinateData)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Error updating coordinate');
+        }
+
+        return await response.json();
+    }
+
+    static async deleteCoordinate(coordinateId) {
+        const response = await fetch(getApiUrl(`/coordinates/${coordinateId}`), {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            throw new Error('Error deleting coordinate');
+        }
+
+        return await response.json();
+    }
+
+    static async extractDataByCoordinates(documentId) {
+        const response = await fetch(getApiUrl(`/coordinates/extract/${documentId}`), {
+            method: 'POST'
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Error extracting data');
+        }
+
+        return await response.json();
+    }
 }

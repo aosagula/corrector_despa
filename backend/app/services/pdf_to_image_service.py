@@ -2,9 +2,10 @@
 Servicio para convertir páginas de PDF a imágenes
 """
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 import logging
 from pdf2image import convert_from_path
+from PIL import Image
 import base64
 from io import BytesIO
 
@@ -49,6 +50,52 @@ class PDFToImageService:
         except Exception as e:
             logger.exception(f"Error convirtiendo PDF a imágenes: {str(e)}")
             raise ValueError(f"No se pudo convertir el PDF a imágenes: {str(e)}")
+
+    @staticmethod
+    def pdf_to_bw_images(pdf_path: str, dpi: int = 300) -> List[Tuple[bytes, int, int]]:
+        """
+        Convierte un PDF a imágenes en blanco y negro de alta calidad para documentos provisorios
+
+        Args:
+            pdf_path: Ruta al archivo PDF
+            dpi: Resolución (default 300 para calidad A4)
+
+        Returns:
+            Lista de tuplas (bytes_imagen, ancho, alto) en formato PNG B&N
+        """
+        try:
+            logger.info(f"Convirtiendo PDF a imágenes B&N 300 DPI: {pdf_path}")
+
+            # Convertir PDF a imágenes PIL en alta resolución
+            images = convert_from_path(pdf_path, dpi=dpi)
+
+            logger.info(f"PDF convertido a {len(images)} páginas")
+
+            # Convertir cada imagen a B&N y guardar como bytes
+            result_list = []
+            for i, image in enumerate(images):
+                # Convertir a escala de grises
+                grayscale_image = image.convert('L')
+
+                # Convertir a blanco y negro puro (1-bit)
+                bw_image = grayscale_image.convert('1')
+
+                # Guardar como PNG
+                img_byte_arr = BytesIO()
+                bw_image.save(img_byte_arr, format='PNG')
+                img_bytes = img_byte_arr.getvalue()
+
+                # Obtener dimensiones
+                width, height = bw_image.size
+
+                result_list.append((img_bytes, width, height))
+                logger.debug(f"Página {i+1}: {width}x{height}px, {len(img_bytes)} bytes")
+
+            return result_list
+
+        except Exception as e:
+            logger.exception(f"Error convirtiendo PDF a imágenes B&N: {str(e)}")
+            raise ValueError(f"No se pudo convertir el PDF a imágenes B&N: {str(e)}")
 
     @staticmethod
     def image_to_base64(image_bytes: bytes) -> str:
