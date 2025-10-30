@@ -804,27 +804,25 @@ function showContentModal(data) {
     });
 }
 
-// View Document Images
+// View Document Images with Navigation
+let currentImageIndex = 0;
+let currentDocumentImages = null;
+let currentDocumentId = null;
+let currentZoomLevel = 1.0;
+
 async function viewDocumentImages(docId) {
     try {
         const data = await DocumentAPI.getProvisionalDocumentImages(docId);
 
-        const imagesHtml = data.images.map(img => `
-            <div class="col-md-6 mb-3">
-                <div class="card">
-                    <div class="card-header">
-                        <strong>Página ${img.page_number}</strong>
-                        <small class="text-muted">(${img.width}x${img.height}px)</small>
-                    </div>
-                    <div class="card-body text-center">
-                        <img src="${DocumentAPI.getProvisionalDocumentImageUrl(docId, img.page_number)}"
-                             class="img-fluid border"
-                             alt="Página ${img.page_number}"
-                             style="max-height: 500px;">
-                    </div>
-                </div>
-            </div>
-        `).join('');
+        if (!data.images || data.images.length === 0) {
+            showToast('No hay imágenes disponibles para este documento', 'warning');
+            return;
+        }
+
+        currentDocumentImages = data.images;
+        currentDocumentId = docId;
+        currentImageIndex = 0;
+        currentZoomLevel = 1.0;
 
         const modalHtml = `
             <div class="modal fade" id="imagesModal" tabindex="-1" aria-labelledby="imagesModalLabel" aria-hidden="true">
@@ -832,14 +830,42 @@ async function viewDocumentImages(docId) {
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title" id="imagesModalLabel">
-                                <i class="bi bi-images"></i> Imágenes del Documento - ${data.filename}
+                                <i class="bi bi-images"></i> ${data.filename}
                             </h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            <p><strong>Total de páginas:</strong> ${data.total_pages}</p>
-                            <div class="row">
-                                ${imagesHtml}
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <button class="btn btn-primary" id="prevImageBtn" onclick="navigateImage(-1)">
+                                    <i class="bi bi-chevron-left"></i> Anterior
+                                </button>
+                                <div class="text-center">
+                                    <h6 id="imagePageInfo">Página 1 de ${data.total_pages}</h6>
+                                    <small class="text-muted" id="imageDimensions"></small>
+                                    <div class="mt-2">
+                                        <div class="btn-group" role="group">
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="zoomImage(-0.1)" title="Alejar">
+                                                <i class="bi bi-zoom-out"></i> -
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="resetZoom()" title="Restablecer zoom" id="zoomLevelBtn">
+                                                100%
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-secondary" onclick="zoomImage(0.1)" title="Acercar">
+                                                <i class="bi bi-zoom-in"></i> +
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button class="btn btn-primary" id="nextImageBtn" onclick="navigateImage(1)">
+                                    Siguiente <i class="bi bi-chevron-right"></i>
+                                </button>
+                            </div>
+                            <div id="imageContainer" class="text-center" style="height: 70vh; overflow: auto; background-color: #f8f9fa; padding: 20px; cursor: move;">
+                                <img id="currentImage"
+                                     src=""
+                                     class="border shadow"
+                                     alt="Imagen del documento"
+                                     style="transition: transform 0.2s; transform-origin: center center; display: inline-block;">
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -863,12 +889,167 @@ async function viewDocumentImages(docId) {
         const modal = new bootstrap.Modal(document.getElementById('imagesModal'));
         modal.show();
 
+        // Cargar primera imagen
+        updateCurrentImage();
+
+        // Agregar soporte para teclas de flecha
+        document.addEventListener('keydown', handleImageKeyNavigation);
+
+        // Agregar funcionalidad de paneo con el mouse
+        setupImagePanning();
+
         // Limpiar modal al cerrar
         document.getElementById('imagesModal').addEventListener('hidden.bs.modal', function () {
+            document.removeEventListener('keydown', handleImageKeyNavigation);
+            currentDocumentImages = null;
+            currentDocumentId = null;
+            currentZoomLevel = 1.0;
             this.remove();
         });
     } catch (error) {
         console.error('Error:', error);
         showToast('Error al obtener las imágenes del documento: ' + error.message, 'error');
     }
+}
+
+function navigateImage(direction) {
+    if (!currentDocumentImages) return;
+
+    currentImageIndex += direction;
+
+    // Limitar el índice
+    if (currentImageIndex < 0) {
+        currentImageIndex = 0;
+    } else if (currentImageIndex >= currentDocumentImages.length) {
+        currentImageIndex = currentDocumentImages.length - 1;
+    }
+
+    // Mantener el zoom al cambiar de página
+    updateCurrentImage();
+}
+
+function updateCurrentImage() {
+    if (!currentDocumentImages || !currentDocumentId) return;
+
+    const img = currentDocumentImages[currentImageIndex];
+    const imageUrl = DocumentAPI.getProvisionalDocumentImageUrl(currentDocumentId, img.page_number);
+
+    // Actualizar imagen
+    const imgElement = document.getElementById('currentImage');
+    const container = document.getElementById('imageContainer');
+
+    if (imgElement) {
+        imgElement.src = imageUrl;
+        imgElement.style.width = `${img.width * currentZoomLevel}px`;
+        imgElement.style.height = `${img.height * currentZoomLevel}px`;
+    }
+
+    // Actualizar cursor del contenedor
+    if (container) {
+        container.style.cursor = currentZoomLevel > 1.0 ? 'move' : 'default';
+    }
+
+    // Actualizar info
+    const pageInfo = document.getElementById('imagePageInfo');
+    if (pageInfo) {
+        pageInfo.textContent = `Página ${currentImageIndex + 1} de ${currentDocumentImages.length}`;
+    }
+
+    const dimensions = document.getElementById('imageDimensions');
+    if (dimensions) {
+        dimensions.textContent = `${img.width} x ${img.height} píxeles`;
+    }
+
+    // Actualizar nivel de zoom
+    const zoomBtn = document.getElementById('zoomLevelBtn');
+    if (zoomBtn) {
+        zoomBtn.textContent = `${Math.round(currentZoomLevel * 100)}%`;
+    }
+
+    // Actualizar botones
+    const prevBtn = document.getElementById('prevImageBtn');
+    const nextBtn = document.getElementById('nextImageBtn');
+
+    if (prevBtn) {
+        prevBtn.disabled = currentImageIndex === 0;
+    }
+
+    if (nextBtn) {
+        nextBtn.disabled = currentImageIndex === currentDocumentImages.length - 1;
+    }
+}
+
+function handleImageKeyNavigation(event) {
+    if (!currentDocumentImages) return;
+
+    if (event.key === 'ArrowLeft') {
+        navigateImage(-1);
+    } else if (event.key === 'ArrowRight') {
+        navigateImage(1);
+    }
+}
+
+function zoomImage(delta) {
+    currentZoomLevel += delta;
+
+    // Limitar el zoom entre 0.2x y 10x
+    if (currentZoomLevel < 0.2) {
+        currentZoomLevel = 0.2;
+    } else if (currentZoomLevel > 10.0) {
+        currentZoomLevel = 10.0;
+    }
+
+    updateCurrentImage();
+}
+
+function resetZoom() {
+    currentZoomLevel = 1.0;
+    updateCurrentImage();
+}
+
+function setupImagePanning() {
+    const container = document.getElementById('imageContainer');
+    if (!container) return;
+
+    let isPanning = false;
+    let startX, startY, scrollLeft, scrollTop;
+
+    container.addEventListener('mousedown', (e) => {
+        // Solo activar paneo si hay zoom aplicado
+        if (currentZoomLevel <= 1.0) return;
+
+        isPanning = true;
+        container.style.cursor = 'grabbing';
+        startX = e.pageX - container.offsetLeft;
+        startY = e.pageY - container.offsetTop;
+        scrollLeft = container.scrollLeft;
+        scrollTop = container.scrollTop;
+    });
+
+    container.addEventListener('mouseleave', () => {
+        isPanning = false;
+        if (currentZoomLevel > 1.0) {
+            container.style.cursor = 'move';
+        }
+    });
+
+    container.addEventListener('mouseup', () => {
+        isPanning = false;
+        if (currentZoomLevel > 1.0) {
+            container.style.cursor = 'move';
+        }
+    });
+
+    container.addEventListener('mousemove', (e) => {
+        if (!isPanning) return;
+        e.preventDefault();
+
+        const x = e.pageX - container.offsetLeft;
+        const y = e.pageY - container.offsetTop;
+        const walkX = (x - startX) * 2; // Multiplicar para hacer el paneo más rápido
+        const walkY = (y - startY) * 2;
+
+        container.scrollLeft = scrollLeft - walkX;
+        container.scrollTop = scrollTop - walkY;
+    });
 }
