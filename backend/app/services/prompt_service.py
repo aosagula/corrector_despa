@@ -11,6 +11,28 @@ class PromptService:
     """Servicio para gestionar plantillas de prompts"""
 
     @staticmethod
+    def get_language_instruction() -> str:
+        """
+        Retorna la instrucción de idioma según la configuración
+
+        Returns:
+            String con la instrucción de idioma para el LLM
+        """
+        from ..core.config import settings
+
+        language_map = {
+            "es": "Responde en español.",
+            "en": "Respond in English.",
+            "pt": "Responda em português.",
+            "fr": "Répondez en français.",
+            "de": "Antworten Sie auf Deutsch.",
+            "it": "Rispondi in italiano."
+        }
+
+        lang = settings.RESPONSE_LANGUAGE.lower()
+        return language_map.get(lang, language_map["es"])
+
+    @staticmethod
     def create_prompt(db: Session, prompt_data: PromptTemplateCreate) -> PromptTemplate:
         """Crear una nueva plantilla de prompt"""
         db_prompt = PromptTemplate(**prompt_data.model_dump())
@@ -137,6 +159,11 @@ Reglas estrictas:
 - Los números deben ser valores numéricos, no strings (a menos que el ejemplo lo muestre como string)
 """
                 rendered += format_instruction
+
+            # Agregar instrucción de idioma
+            from ..core.config import settings
+            language_instruction = PromptService.get_language_instruction()
+            rendered += f"\n\n{language_instruction}"
 
             logger.info(f"Prompt renderizado exitosamente (length: {len(rendered)})")
             return rendered

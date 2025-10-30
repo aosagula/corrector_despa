@@ -14,6 +14,8 @@ class CommercialDocument(Base):
     reference = Column(String(100), index=True)  # Referencia para agrupar documentos relacionados
     document_type = Column(String(100))  # factura, orden_compra, certificado, etc.
     classification_confidence = Column(Float)
+    extraction_model = Column(String(100))  # Modelo usado para extracción (phi4-mini, qwen2.5-vl:3b, etc.)
+    extraction_prompt = Column(Text)  # Prompt usado para la extracción
     extracted_data = Column(JSON)  # Datos extraídos del documento
     text_content = Column(Text)  # Contenido de texto extraído del documento
     created_at = Column(DateTime(timezone=True), server_default=func.now())
@@ -31,6 +33,8 @@ class ProvisionalDocument(Base):
     filename = Column(String(255), nullable=False)
     file_path = Column(String(500), nullable=False)
     reference = Column(String(100), index=True)  # Referencia para agrupar documentos relacionados
+    extraction_model = Column(String(100))  # Modelo usado para extracción (phi4-mini, qwen2.5-vl:3b, etc.)
+    extraction_prompt = Column(Text)  # Prompt usado para la extracción
     extracted_data = Column(JSON)  # Datos extraídos del documento
     text_content = Column(Text)  # Contenido de texto extraído del documento
     created_at = Column(DateTime(timezone=True), server_default=func.now())

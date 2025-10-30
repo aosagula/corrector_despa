@@ -31,6 +31,14 @@ class LlamaService:
         # Remover texto antes/después del JSON
         text = text.strip()
 
+        # Buscar el inicio del JSON (primer { o [)
+        json_start = min(
+            text.find('{') if text.find('{') != -1 else len(text),
+            text.find('[') if text.find('[') != -1 else len(text)
+        )
+        if json_start < len(text):
+            text = text[json_start:]
+
         # Reemplazar comillas tipográficas por comillas normales
         # " " → " (U+201C, U+201D → U+0022)
         # ' ' → ' (U+2018, U+2019 → U+0027)
@@ -75,9 +83,59 @@ class LlamaService:
 
         text = '\n'.join(cleaned_lines)
 
-        # Remover expresiones JavaScript (ej: 2000 + (2 * 42) + 1)
-        # Reemplazar por null si está en contexto de valor
-        text = re.sub(r':\s*([0-9]+\s*[\+\-\*\/]\s*[0-9()\s\+\-\*\/]+)', ': null', text)
+        # Escapar comillas dobles dentro de valores de string JSON
+        # Procesar línea por línea para evitar falsos positivos
+        def fix_json_quotes_in_line(line: str) -> str:
+            # Buscar patrón: "key": "value..."
+            # Contar comillas para detectar si hay comillas internas
+            match = re.match(r'^(\s*)"([^"]+)":\s*"(.*)$', line)
+            if not match:
+                return line
+
+            indent = match.group(1)
+            key = match.group(2)
+            rest = match.group(3)
+
+            # Contar comillas en el resto de la línea
+            quote_count = rest.count('"')
+
+            # Si hay más de 1 comilla (la de cierre + otras internas)
+            if quote_count > 1:
+                # Buscar la última comilla (la de cierre del valor)
+                last_quote_idx = rest.rfind('"')
+                if last_quote_idx > 0:
+                    # Dividir en: valor_interno + comilla_cierre + resto (coma, etc)
+                    value_part = rest[:last_quote_idx]
+                    closing_part = rest[last_quote_idx:]
+
+                    # Escapar comillas en la parte del valor
+                    value_escaped = value_part.replace('"', '\\"')
+
+                    return f'{indent}"{key}": "{value_escaped}{closing_part}'
+
+            return line
+
+        # Aplicar a cada línea
+        text_lines = text.split('\n')
+        text = '\n'.join(fix_json_quotes_in_line(line) for line in text_lines)
+
+        # Remover expresiones matemáticas/JavaScript (ej: 2000 + (2 * 42) + 1, 1008 + ((2 * 42)))
+        # Patrón mejorado que captura cualquier combinación de números, operadores y paréntesis
+        # Convertir a string para preservar la intención del LLM
+        def convert_math_expression(match):
+            expr = match.group(1)
+            # Si contiene operadores matemáticos, convertir a string
+            if any(op in expr for op in ['+', '-', '*', '/']):
+                return f': "{expr}"'
+            return match.group(0)
+
+        # Buscar expresiones que contengan números con operadores
+        text = re.sub(r':\s*([0-9()\s\+\-\*\/]+(?:[0-9()\s\+\-\*\/]+)?)', convert_math_expression, text)
+
+        # Convertir números con unidades/sufijos a strings (2000L = 2000 Litros, 3.14kg, etc)
+        # Preservar el contenido completo incluyendo la unidad
+        # 2000L → "2000L", 3.14kg → "3.14kg", 100m → "100m"
+        text = re.sub(r':\s*(\d+\.?\d*[a-zA-Z]+)\b', r': "\1"', text)
 
         # Convertir números mal formateados a strings
         # Solo números con comas DENTRO del número (ej: 1.234,56 o 30,40)
@@ -108,6 +166,26 @@ class LlamaService:
         logger.debug(f"JSON después de limpieza: {text[:300]}")
         return text
 
+    @staticmethod
+    def get_language_instruction() -> str:
+        """
+        Retorna la instrucción de idioma según la configuración
+
+        Returns:
+            String con la instrucción de idioma para el LLM
+        """
+        language_map = {
+            "es": "Responde en español.",
+            "en": "Respond in English.",
+            "pt": "Responda em português.",
+            "fr": "Répondez en français.",
+            "de": "Antworten Sie auf Deutsch.",
+            "it": "Rispondi in italiano."
+        }
+
+        lang = settings.RESPONSE_LANGUAGE.lower()
+        return language_map.get(lang, language_map["es"])
+
     def classify_document(self, text_content: str, db: Session) -> Dict[str, Any]:
         """
         Clasifica un documento comercial usando Phi-4 con prompt de BD
@@ -124,6 +202,7 @@ class LlamaService:
 
         if not prompt_template:
             # Fallback al prompt por defecto si no hay uno en la BD
+            language_instruction = self.get_language_instruction()
             prompt = f"""Analiza el siguiente contenido de documento y clasifícalo en una de estas categorías:
 - factura
 - orden_compra
@@ -138,6 +217,8 @@ Contenido del documento:
 
 Responde ÚNICAMENTE con un JSON en el siguiente formato:
 {{"document_type": "tipo_de_documento", "confidence": 0.95, "reasoning": "breve explicación"}}
+
+{language_instruction}
 """
         else:
             # Usar el prompt de la BD
@@ -199,14 +280,32 @@ Responde ÚNICAMENTE con un JSON en el siguiente formato:
             logger.exception(f"Error de JSON decode: {str(e)}")
             logger.error(f"Texto original que causó el error: {response_text}")
             logger.error(f"Texto limpio que causó el error: {cleaned_text}")
-            # Mostrar bytes para detectar caracteres invisibles
-            logger.error(f"Bytes del texto limpio: {cleaned_text.encode('unicode_escape').decode('ascii')}")
-            raise ValueError(f"No se pudo parsear la respuesta del modelo como JSON: {str(e)}")
+
+            # Intentar recuperación
+            try:
+                error_pos = e.pos if hasattr(e, 'pos') else len(cleaned_text)
+
+                # Intentar cerrar el JSON en la posición del error
+                truncated = cleaned_text[:error_pos].rstrip()
+                open_braces = truncated.count('{')
+                close_braces = truncated.count('}')
+                truncated = truncated.rstrip(',')
+                truncated += '\n' + ('}' * (open_braces - close_braces))
+
+                logger.info(f"Intentando parsear JSON truncado: {truncated[:500]}")
+                result = json.loads(truncated)
+                logger.warning(f"JSON reparado exitosamente truncando en posición {error_pos}")
+                return result
+
+            except Exception as recovery_error:
+                logger.error(f"Falló la recuperación del JSON: {str(recovery_error)}")
+                logger.error(f"Bytes del texto limpio: {cleaned_text.encode('unicode_escape').decode('ascii')}")
+                raise ValueError(f"No se pudo parsear la respuesta del modelo como JSON: {str(e)}")
         except Exception as e:
             logger.exception(f"Error general en clasificación: {str(e)}")
             raise
 
-    def extract_structured_data(self, text_content: str, document_type: str, db: Session) -> Dict[str, Any]:
+    def extract_structured_data(self, text_content: str, document_type: str, db: Session) -> tuple[Dict[str, Any], str]:
         """
         Extrae datos estructurados del documento según su tipo usando prompt de BD
 
@@ -220,7 +319,7 @@ Responde ÚNICAMENTE con un JSON en el siguiente formato:
         """
         # Obtener el prompt de extracción específico para este tipo de documento
         prompt_template = PromptService.get_extraction_prompt(db, document_type)
-        logger.info(f"template de prompt obtenido para extracción {document_type}, prompt_tempate: {prompt_template}", )
+        logger.info(f"template de prompt obtenido para extracción {document_type}, prompt_tempate: {prompt_template.prompt_template}", )
 
         if not prompt_template:
             # Fallback a campos por defecto si no hay prompt en la BD
@@ -263,6 +362,7 @@ Responde ÚNICAMENTE con un JSON en el siguiente formato:
                 json_schema=prompt_template.json_schema
             )
 
+        logger.info(f"Extrayendo datos estructurados con el siguiente prompt: {prompt}")
         try:
             logger.info(f"Extrayendo datos estructurados para documento tipo: {document_type}")
             response = self.client.generate(
@@ -301,14 +401,52 @@ Responde ÚNICAMENTE con un JSON en el siguiente formato:
 
             extracted_data = json.loads(cleaned_text)
             logger.info(f"Extracción exitosa: {len(extracted_data)} campos extraídos")
-            return extracted_data
+            return extracted_data, prompt
 
         except json.JSONDecodeError as e:
             logger.exception(f"Error de JSON decode en extracción: {str(e)}")
             logger.error(f"Texto original que causó el error: {response_text}")
             logger.error(f"Texto limpio que causó el error: {cleaned_text}")
-            logger.error(f"Bytes del texto limpio: {cleaned_text.encode('unicode_escape').decode('ascii')}")
-            raise ValueError(f"No se pudo parsear la respuesta del modelo como JSON: {str(e)}")
+
+            # Intentar recuperación: extraer hasta donde sea válido
+            try:
+                # Encontrar la posición del error
+                error_pos = e.pos if hasattr(e, 'pos') else len(cleaned_text)
+
+                # Intentar diferentes estrategias de reparación
+                # 1. Remover el campo "reasoning" si existe (suele estar al final)
+                if '"reasoning"' in cleaned_text:
+                    # Buscar y remover el campo reasoning
+                    reasoning_pattern = r',?\s*"reasoning"\s*:\s*"[^"]*"?\s*'
+                    repaired_text = re.sub(reasoning_pattern, '', cleaned_text)
+                    # Asegurar que el JSON cierre correctamente
+                    if not repaired_text.rstrip().endswith('}'):
+                        repaired_text = repaired_text.rstrip().rstrip(',') + '\n}'
+
+                    logger.info(f"Intentando parsear JSON sin campo 'reasoning': {repaired_text[:500]}")
+                    extracted_data = json.loads(repaired_text)
+                    logger.warning(f"JSON reparado exitosamente removiendo campo 'reasoning'")
+                    return extracted_data, prompt
+
+                # 2. Intentar cerrar el JSON en la posición del error
+                truncated = cleaned_text[:error_pos].rstrip()
+                # Contar llaves abiertas vs cerradas
+                open_braces = truncated.count('{')
+                close_braces = truncated.count('}')
+                # Remover trailing comma si existe
+                truncated = truncated.rstrip(',')
+                # Agregar llaves de cierre faltantes
+                truncated += '\n' + ('}' * (open_braces - close_braces))
+
+                logger.info(f"Intentando parsear JSON truncado: {truncated[:500]}")
+                extracted_data = json.loads(truncated)
+                logger.warning(f"JSON reparado exitosamente truncando en posición {error_pos}")
+                return extracted_data, prompt
+
+            except Exception as recovery_error:
+                logger.error(f"Falló la recuperación del JSON: {str(recovery_error)}")
+                logger.error(f"Bytes del texto limpio: {cleaned_text.encode('unicode_escape').decode('ascii')}")
+                raise ValueError(f"No se pudo parsear la respuesta del modelo como JSON: {str(e)}")
         except Exception as e:
             logger.exception(f"Error general en extracción de datos: {str(e)}")
             raise

@@ -18,6 +18,8 @@ class CommercialDocumentResponse(CommercialDocumentBase):
     id: int
     file_path: str
     classification_confidence: Optional[float] = None
+    extraction_model: Optional[str] = None
+    extraction_prompt: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 
@@ -38,6 +40,8 @@ class ProvisionalDocumentCreate(ProvisionalDocumentBase):
 class ProvisionalDocumentResponse(ProvisionalDocumentBase):
     id: int
     file_path: str
+    extraction_model: Optional[str] = None
+    extraction_prompt: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
 

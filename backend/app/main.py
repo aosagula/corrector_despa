@@ -16,8 +16,21 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
+logger = logging.getLogger(__name__)
+
 # Configurar zona horaria
 os.environ['TZ'] = 'America/Argentina/Buenos_Aires'
+
+# Mostrar configuración de extracción al iniciar
+logger.info("=" * 60)
+logger.info("CONFIGURACIÓN DE EXTRACCIÓN")
+logger.info(f"Método de extracción: {settings.EXTRACTION_METHOD}")
+logger.info(f"Modelo de clasificación: {settings.OLLAMA_MODEL}")
+if settings.EXTRACTION_METHOD == "vision":
+    logger.info(f"Modelo de extracción (visión): {settings.VISION_MODEL}")
+else:
+    logger.info(f"Modelo de extracción (OCR): {settings.OLLAMA_MODEL}")
+logger.info("=" * 60)
 
 # Crear tablas en la base de datos
 Base.metadata.create_all(bind=engine)

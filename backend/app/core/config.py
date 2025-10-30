@@ -24,6 +24,13 @@ class Settings(BaseSettings):
     OLLAMA_HOST: str
     OLLAMA_MODEL: str
 
+    # Extraction Method Settings
+    EXTRACTION_METHOD: str = "ocr"  # "ocr" or "vision"
+    VISION_MODEL: str = "qwen2.5-vl:3b"
+
+    # Language Settings
+    RESPONSE_LANGUAGE: str = "es"  # Language for LLM responses (es, en, pt, etc.)
+
     # File Upload Settings
     UPLOAD_DIR: str
     MAX_FILE_SIZE: int

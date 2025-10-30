@@ -4,6 +4,9 @@ from typing import List, Optional
 import os
 import shutil
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 from ...core.database import get_db
 from ...core.config import settings
@@ -15,6 +18,7 @@ from ...schemas.document import (
 )
 from ...services.ocr_service import ocr_service
 from ...services.llama_service import llama_service
+from ...services.vision_service import vision_service
 
 router = APIRouter()
 
@@ -55,19 +59,31 @@ async def upload_commercial_document(
         raise HTTPException(status_code=500, detail=f"Error guardando archivo: {str(e)}")
 
     try:
-        # Extraer texto
+        # Extraer texto (siempre necesario para guardar en text_content)
         text_content = ocr_service.extract_text(str(file_path), file_extension)
 
         if not text_content:
             raise HTTPException(status_code=400, detail="No se pudo extraer texto del documento")
 
-        # Clasificar documento
+        # Clasificar documento (siempre usa OCR/texto)
         classification_result = llama_service.classify_document(text_content, db)
         document_type = classification_result.get("document_type", "desconocido")
         confidence = classification_result.get("confidence", 0.0)
 
-        # Extraer datos estructurados
-        extracted_data = llama_service.extract_structured_data(text_content, document_type, db)
+        # Extraer datos estructurados según método configurado
+        if settings.EXTRACTION_METHOD == "vision":
+            logger.info(f"Usando extracción basada en visión para {document_type}")
+            extraction_model_used = settings.VISION_MODEL
+            if file_extension == ".pdf":
+                extracted_data, extraction_prompt = vision_service.extract_from_pdf(str(file_path), document_type, db)
+            else:
+                # Para imágenes directamente
+                extracted_data, extraction_prompt = vision_service.extract_from_image_file(str(file_path), document_type, db)
+        else:
+            logger.info(f"Usando extracción basada en OCR para {document_type}")
+            extraction_model_used = settings.OLLAMA_MODEL
+            extracted_data, extraction_prompt = llama_service.extract_structured_data(text_content, document_type, db)
+
         extracted_data["classification_reasoning"] = classification_result.get("reasoning", "")
 
         # Guardar en base de datos
@@ -77,6 +93,8 @@ async def upload_commercial_document(
             reference=reference,
             document_type=document_type,
             classification_confidence=confidence,
+            extraction_model=extraction_model_used,
+            extraction_prompt=extraction_prompt,
             extracted_data=extracted_data,
             text_content=text_content
         )
@@ -133,20 +151,33 @@ async def upload_provisional_document(
         raise HTTPException(status_code=500, detail=f"Error guardando archivo: {str(e)}")
 
     try:
-        # Extraer texto
+        # Extraer texto (siempre necesario para guardar en text_content)
         text_content = ocr_service.extract_text(str(file_path), file_extension)
 
         if not text_content:
             raise HTTPException(status_code=400, detail="No se pudo extraer texto del documento")
 
-        # Extraer datos estructurados (asumiendo que es una factura genérica)
-        extracted_data = llama_service.extract_structured_data(text_content, "factura", db)
+        # Extraer datos estructurados según método configurado (asumiendo que es una factura genérica)
+        document_type = "factura"
+        if settings.EXTRACTION_METHOD == "vision":
+            logger.info(f"Usando extracción basada en visión para documento provisorio")
+            extraction_model_used = settings.VISION_MODEL
+            if file_extension == ".pdf":
+                extracted_data, extraction_prompt = vision_service.extract_from_pdf(str(file_path), document_type, db)
+            else:
+                extracted_data, extraction_prompt = vision_service.extract_from_image_file(str(file_path), document_type, db)
+        else:
+            logger.info(f"Usando extracción basada en OCR para documento provisorio")
+            extraction_model_used = settings.OLLAMA_MODEL
+            extracted_data, extraction_prompt = llama_service.extract_structured_data(text_content, document_type, db)
 
         # Guardar en base de datos
         db_document = ProvisionalDocument(
             filename=file.filename,
             file_path=str(file_path),
             reference=reference,
+            extraction_model=extraction_model_used,
+            extraction_prompt=extraction_prompt,
             extracted_data=extracted_data,
             text_content=text_content
         )
