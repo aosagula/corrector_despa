@@ -64,6 +64,11 @@ services:
       # Ollama
       OLLAMA_HOST: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-phi3}
+      # Extraction
+      EXTRACTION_METHOD: ${EXTRACTION_METHOD:-ocr}
+      VISION_MODEL: ${VISION_MODEL:-qwen2.5-vl:3b}
+      # Language
+      RESPONSE_LANGUAGE: ${RESPONSE_LANGUAGE:-es}
       # API
       API_V1_STR: ${API_V1_STR:-/api/v1}
       PROJECT_NAME: ${PROJECT_NAME:-Corrector de Documentos}
@@ -72,6 +77,8 @@ services:
       MAX_FILE_SIZE: ${MAX_FILE_SIZE:-10485760}
       # Timezone
       TIMEZONE: ${TIMEZONE:-America/Argentina/Buenos_Aires}
+      # Error Handling
+      ERROR_LEVEL: ${ERROR_LEVEL:-production}
     volumes:
       - ./backend/app:/app/app
       - uploads_data:/app/uploads

@@ -130,6 +130,7 @@ async def upload_provisional_document(
     Sube y procesa un documento provisorio para validación
 
     - Extrae el texto del documento
+    - Valida que sea un documento provisorio (debe contener: SUBREGIMEN, DECLARACION DE LA MERCADERIA, PROVISORIO)
     - Extrae datos estructurados
     - Guarda en la base de datos
     - Opcionalmente asocia una referencia para agrupar documentos
@@ -156,6 +157,20 @@ async def upload_provisional_document(
 
         if not text_content:
             raise HTTPException(status_code=400, detail="No se pudo extraer texto del documento")
+
+        # Validar que sea un documento provisorio
+        required_keywords = ["SUBREGIMEN", "DECLARACION DE LA MERCADERIA"]
+        text_upper = text_content.upper()
+        missing_keywords = [kw for kw in required_keywords if kw not in text_upper]
+
+        if missing_keywords:
+            # Eliminar archivo si la validación falla
+            if file_path.exists():
+                os.remove(file_path)
+            raise HTTPException(
+                status_code=400,
+                detail=f"El documento no parece ser un documento provisorio. Faltan las siguientes palabras clave: {', '.join(missing_keywords)}"
+            )
 
         # Extraer datos estructurados según método configurado (asumiendo que es una factura genérica)
         document_type = "factura"

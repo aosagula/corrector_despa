@@ -1,9 +1,12 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from pathlib import Path
 import os
 import logging
+import traceback
 
 from .core.config import settings
 from .core.database import engine, Base, SessionLocal
@@ -87,6 +90,44 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Manejador de excepciones global
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """
+    Manejador global de excepciones que respeta el ERROR_LEVEL configurado
+    """
+    logger.error(f"Error no manejado: {str(exc)}", exc_info=True)
+
+    if settings.ERROR_LEVEL == "development":
+        # En desarrollo, mostrar detalles completos del error
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "detail": str(exc),
+                "type": type(exc).__name__,
+                "traceback": traceback.format_exc().split('\n')
+            }
+        )
+    else:
+        # En producción, ocultar detalles sensibles
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Internal Server Error"}
+        )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """
+    Manejador de errores de validación de request
+    """
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content={
+            "detail": exc.errors(),
+            "body": exc.body
+        }
+    )
 
 # Incluir routers
 app.include_router(

@@ -46,6 +46,9 @@ class Settings(BaseSettings):
     # CORS
     BACKEND_CORS_ORIGINS: List[str] = ["http://localhost", "http://localhost:8080", "http://localhost:3000"]
 
+    # Error Handling
+    ERROR_LEVEL: str = "production"  # "production" or "development"
+
     class Config:
         case_sensitive = True
         env_file = ".env"
