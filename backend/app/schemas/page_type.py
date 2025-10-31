@@ -55,7 +55,10 @@ class DetectionRuleBase(BaseModel):
     x2: int = Field(..., gt=0)
     y2: int = Field(..., gt=0)
     expected_value: Optional[str] = Field(None, max_length=500, description="Valor esperado")
-    match_type: str = Field(default="contains", description="Tipo de coincidencia: contains, exact, regex")
+    match_type: str = Field(default="contains", description="DEPRECATED: usar data_type y comparator")
+    data_type: str = Field(default="text", description="Tipo de dato: text, number, date")
+    comparator: str = Field(default="contains", description="Comparador: contains, not_contains, exact, not_exact, regex (text) | eq, ne, gt, lt, gte, lte (number/date)")
+    date_format: Optional[str] = Field(None, max_length=50, description="Formato de fecha para parsing (ej: %d/%m/%Y)")
     priority: int = Field(default=0, description="Prioridad de la regla")
 
 
@@ -73,6 +76,9 @@ class DetectionRuleUpdate(BaseModel):
     y2: Optional[int] = Field(None, gt=0)
     expected_value: Optional[str] = Field(None, max_length=500)
     match_type: Optional[str] = None
+    data_type: Optional[str] = None
+    comparator: Optional[str] = None
+    date_format: Optional[str] = Field(None, max_length=50)
     priority: Optional[int] = None
 
 

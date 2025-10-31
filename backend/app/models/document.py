@@ -123,8 +123,11 @@ class PageTypeDetectionRule(Base):
     y1 = Column(Integer, nullable=False)
     x2 = Column(Integer, nullable=False)
     y2 = Column(Integer, nullable=False)
-    expected_value = Column(String(500))  # Valor esperado (puede ser regex o texto exacto)
-    match_type = Column(String(20), default="contains")  # contains, exact, regex
+    expected_value = Column(String(500))  # Valor esperado (puede ser regex, texto, número, fecha)
+    match_type = Column(String(20), default="contains")  # contains, not_contains, exact, not_exact, regex (para text)
+    data_type = Column(String(20), default="text")  # text, number, date
+    comparator = Column(String(20), default="contains")  # Para text: contains, not_contains, exact, not_exact, regex. Para number/date: eq, ne, gt, lt, gte, lte
+    date_format = Column(String(50))  # Formato de fecha para parsing (ej: %d/%m/%Y)
     priority = Column(Integer, default=0)  # Prioridad de la regla (mayor = más importante)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

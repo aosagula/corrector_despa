@@ -11,6 +11,8 @@ let startY = 0;
 let currentRect = null;
 let drawnRects = [];
 let canvasZoom = 1.0;
+let currentRules = []; // Store current rules for editing
+let editingRuleId = null; // Track which rule is being edited
 
 // View detection rules for a page type
 async function viewDetectionRules(pageTypeId, displayName) {
@@ -18,10 +20,10 @@ async function viewDetectionRules(pageTypeId, displayName) {
 
     try {
         // Load existing rules
-        const rules = await DocumentAPI.listDetectionRules(pageTypeId);
+        currentRules = await DocumentAPI.listDetectionRules(pageTypeId);
 
         // Show rules modal
-        showDetectionRulesModal(displayName, rules);
+        showDetectionRulesModal(displayName, currentRules);
     } catch (error) {
         console.error('Error:', error);
         showToast('Error al cargar reglas: ' + error.message, 'error');
@@ -40,17 +42,36 @@ function showDetectionRulesModal(pageTypeName, rules) {
                         <small class="text-muted">
                             Coords: (${rule.x1}, ${rule.y1}) → (${rule.x2}, ${rule.y2})
                             <br>
-                            Valor esperado: ${rule.expected_value || 'N/A'} | Tipo: ${rule.match_type}
+                            Tipo: ${rule.data_type || 'text'} | Comparador: ${rule.comparator || rule.match_type}
+                            <br>
+                            Valor esperado: ${rule.expected_value || 'N/A'}
                         </small>
                     </div>
-                    <button class="btn btn-sm btn-danger" onclick="deleteDetectionRule(${rule.id})">
-                        <i class="bi bi-trash"></i>
-                    </button>
+                    <div class="btn-group-vertical btn-group-sm">
+                        <button class="btn btn-outline-primary" onclick="editDetectionRule(${rule.id})" title="Editar">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="btn btn-outline-danger" onclick="deleteDetectionRule(${rule.id})" title="Eliminar">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     `).join('') : '<p class="text-muted">No hay reglas definidas.</p>';
 
+    const existingModal = document.getElementById('detectionRulesModal');
+
+    // Si el modal ya existe, solo actualizar el contenido
+    if (existingModal) {
+        const rulesListContainer = document.getElementById('rulesList');
+        if (rulesListContainer) {
+            rulesListContainer.innerHTML = rulesHtml;
+            return; // No crear nuevo modal, solo actualizar contenido
+        }
+    }
+
+    // Si no existe, crear el modal
     const modalHtml = `
         <div class="modal fade" id="detectionRulesModal" tabindex="-1">
             <div class="modal-dialog modal-lg">
@@ -79,22 +100,28 @@ function showDetectionRulesModal(pageTypeName, rules) {
         </div>
     `;
 
-    const existingModal = document.getElementById('detectionRulesModal');
-    if (existingModal) {
-        existingModal.remove();
-    }
-
     document.body.insertAdjacentHTML('beforeend', modalHtml);
     const modal = new bootstrap.Modal(document.getElementById('detectionRulesModal'));
     modal.show();
 
     document.getElementById('detectionRulesModal').addEventListener('hidden.bs.modal', function () {
         this.remove();
+        // Limpiar cualquier backdrop que quede
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => backdrop.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
     });
 }
 
 // Show rule drawer (canvas editor)
-async function showRuleDrawer() {
+async function showRuleDrawer(isEdit = false) {
+    // Reset editing state for new rules (not when editing)
+    if (!isEdit) {
+        editingRuleId = null;
+    }
+
     // First, select a document to load images
     const documents = await DocumentAPI.listProvisionalDocuments();
 
@@ -179,17 +206,34 @@ async function showRuleDrawer() {
                                                        placeholder="ej: tipo_documento">
                                             </div>
                                             <div class="mb-3">
-                                                <label for="ruleExpectedValue" class="form-label">Valor Esperado</label>
-                                                <input type="text" class="form-control" id="ruleExpectedValue"
-                                                       placeholder="ej: PROVISORIO">
+                                                <label for="ruleDataType" class="form-label">Tipo de Dato</label>
+                                                <select class="form-select" id="ruleDataType" onchange="updateComparatorOptions()">
+                                                    <option value="text">Texto</option>
+                                                    <option value="number">Número</option>
+                                                    <option value="date">Fecha</option>
+                                                </select>
                                             </div>
                                             <div class="mb-3">
-                                                <label for="ruleMatchType" class="form-label">Tipo de Coincidencia</label>
-                                                <select class="form-select" id="ruleMatchType">
+                                                <label for="ruleComparator" class="form-label">Comparador</label>
+                                                <select class="form-select" id="ruleComparator">
                                                     <option value="contains">Contiene</option>
+                                                    <option value="not_contains">No Contiene</option>
                                                     <option value="exact">Exacto</option>
+                                                    <option value="not_exact">No Igual</option>
                                                     <option value="regex">Expresión Regular</option>
                                                 </select>
+                                            </div>
+                                            <div class="mb-3">
+                                                <label for="ruleExpectedValue" class="form-label">Valor de Referencia</label>
+                                                <input type="text" class="form-control" id="ruleExpectedValue"
+                                                       placeholder="ej: PROVISORIO">
+                                                <small class="text-muted" id="ruleExpectedValueHint"></small>
+                                            </div>
+                                            <div class="mb-3" id="ruleDateFormatGroup" style="display: none;">
+                                                <label for="ruleDateFormat" class="form-label">Formato de Fecha</label>
+                                                <input type="text" class="form-control" id="ruleDateFormat"
+                                                       placeholder="ej: %d/%m/%Y">
+                                                <small class="text-muted">Formato Python strptime (ej: %d/%m/%Y para 31/12/2023)</small>
                                             </div>
                                             <div class="mb-3">
                                                 <label for="rulePriority" class="form-label">Prioridad</label>
@@ -384,6 +428,7 @@ async function saveDetectionRule() {
         return;
     }
 
+    const dataType = document.getElementById('ruleDataType').value;
     const ruleData = {
         page_type_id: currentPageType.id,
         attribute_name: document.getElementById('ruleAttrName').value,
@@ -392,7 +437,10 @@ async function saveDetectionRule() {
         x2: currentRect.x2,
         y2: currentRect.y2,
         expected_value: document.getElementById('ruleExpectedValue').value || null,
-        match_type: document.getElementById('ruleMatchType').value,
+        data_type: dataType,
+        comparator: document.getElementById('ruleComparator').value,
+        match_type: document.getElementById('ruleComparator').value, // Mantener compatibilidad
+        date_format: dataType === 'date' ? (document.getElementById('ruleDateFormat').value || null) : null,
         priority: parseInt(document.getElementById('rulePriority').value)
     };
 
@@ -400,15 +448,134 @@ async function saveDetectionRule() {
         await DocumentAPI.createDetectionRule(currentPageType.id, ruleData);
         showToast('Regla creada exitosamente', 'success');
 
-        // Close drawer modal
+        // Close drawer modal and wait for it to fully close
         const drawerModal = bootstrap.Modal.getInstance(document.getElementById('ruleDrawerModal'));
-        drawerModal.hide();
+        const modalElement = document.getElementById('ruleDrawerModal');
 
-        // Reload rules
-        viewDetectionRules(currentPageType.id, currentPageType.name);
+        // Wait for modal to be hidden before opening the next one
+        modalElement.addEventListener('hidden.bs.modal', function onHidden() {
+            // Remove listener to avoid multiple calls
+            modalElement.removeEventListener('hidden.bs.modal', onHidden);
+
+            // Reload rules in the main modal
+            viewDetectionRules(currentPageType.id, currentPageType.name);
+        });
+
+        drawerModal.hide();
     } catch (error) {
         console.error('Error:', error);
         showToast('Error al crear regla: ' + error.message, 'error');
+    }
+}
+
+// Edit detection rule
+async function editDetectionRule(ruleId) {
+    // Find the rule in currentRules
+    const rule = currentRules.find(r => r.id === ruleId);
+    if (!rule) {
+        showToast('No se encontró la regla', 'error');
+        return;
+    }
+
+    editingRuleId = ruleId;
+
+    // Pre-fill the form with existing values
+    await showRuleDrawer(true); // Pass true to indicate this is an edit
+
+    // Wait for modal to be visible
+    setTimeout(() => {
+        // Set form values
+        document.getElementById('ruleAttrName').value = rule.attribute_name;
+        document.getElementById('ruleExpectedValue').value = rule.expected_value || '';
+        document.getElementById('ruleDataType').value = rule.data_type || 'text';
+        document.getElementById('rulePriority').value = rule.priority || 0;
+
+        // Update comparator options for the data type
+        updateComparatorOptions();
+
+        // Set comparator value after options are updated
+        document.getElementById('ruleComparator').value = rule.comparator || rule.match_type || 'contains';
+
+        // Set date format if applicable
+        if (rule.date_format) {
+            document.getElementById('ruleDateFormat').value = rule.date_format;
+        }
+
+        // Set coordinates
+        currentRect = {
+            x1: rule.x1,
+            y1: rule.y1,
+            x2: rule.x2,
+            y2: rule.y2
+        };
+
+        // Update coordinates display
+        document.getElementById('ruleCoordinates').textContent =
+            `X1: ${rule.x1}, Y1: ${rule.y1}, X2: ${rule.x2}, Y2: ${rule.y2}`;
+
+        // Update modal title
+        const modalTitle = document.querySelector('#ruleDrawerModal .modal-title');
+        if (modalTitle) {
+            modalTitle.innerHTML = '<i class="bi bi-pencil-square"></i> Editar Regla de Detección - ' + currentPageType.name;
+        }
+
+        // Update save button text
+        const saveBtn = document.querySelector('#ruleDrawerModal .modal-footer .btn-primary');
+        if (saveBtn) {
+            saveBtn.innerHTML = '<i class="bi bi-save"></i> Actualizar Regla';
+            saveBtn.onclick = updateDetectionRule;
+        }
+    }, 300);
+}
+
+// Update detection rule
+async function updateDetectionRule() {
+    const form = document.getElementById('ruleConfigForm');
+
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
+    if (!currentRect) {
+        showToast('Debes dibujar un área en la imagen', 'warning');
+        return;
+    }
+
+    const dataType = document.getElementById('ruleDataType').value;
+    const ruleData = {
+        attribute_name: document.getElementById('ruleAttrName').value,
+        x1: currentRect.x1,
+        y1: currentRect.y1,
+        x2: currentRect.x2,
+        y2: currentRect.y2,
+        expected_value: document.getElementById('ruleExpectedValue').value || null,
+        data_type: dataType,
+        comparator: document.getElementById('ruleComparator').value,
+        match_type: document.getElementById('ruleComparator').value, // Mantener compatibilidad
+        date_format: dataType === 'date' ? (document.getElementById('ruleDateFormat').value || null) : null,
+        priority: parseInt(document.getElementById('rulePriority').value)
+    };
+
+    try {
+        await DocumentAPI.updateDetectionRule(editingRuleId, ruleData);
+        showToast('Regla actualizada exitosamente', 'success');
+
+        editingRuleId = null;
+
+        // Close drawer modal and wait for it to fully close
+        const drawerModal = bootstrap.Modal.getInstance(document.getElementById('ruleDrawerModal'));
+        const modalElement = document.getElementById('ruleDrawerModal');
+
+        modalElement.addEventListener('hidden.bs.modal', function onHidden() {
+            modalElement.removeEventListener('hidden.bs.modal', onHidden);
+            viewDetectionRules(currentPageType.id, currentPageType.name);
+        });
+
+        drawerModal.hide();
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('Error al actualizar regla: ' + error.message, 'error');
     }
 }
 
@@ -478,5 +645,53 @@ function updateRuleCanvas() {
     const zoomBtn = document.getElementById('ruleZoomLevelBtn');
     if (zoomBtn) {
         zoomBtn.textContent = `${Math.round(canvasZoom * 100)}%`;
+    }
+}
+
+// Update comparator options based on data type
+function updateComparatorOptions() {
+    const dataType = document.getElementById('ruleDataType').value;
+    const comparatorSelect = document.getElementById('ruleComparator');
+    const dateFormatGroup = document.getElementById('ruleDateFormatGroup');
+    const valueHint = document.getElementById('ruleExpectedValueHint');
+
+    // Clear current options
+    comparatorSelect.innerHTML = '';
+
+    if (dataType === 'text') {
+        // Text comparators
+        comparatorSelect.innerHTML = `
+            <option value="contains">Contiene</option>
+            <option value="not_contains">No Contiene</option>
+            <option value="exact">Exacto</option>
+            <option value="not_exact">No Igual</option>
+            <option value="regex">Expresión Regular</option>
+        `;
+        dateFormatGroup.style.display = 'none';
+        valueHint.textContent = 'Texto a buscar o regex';
+    } else if (dataType === 'number') {
+        // Number comparators
+        comparatorSelect.innerHTML = `
+            <option value="eq">Igual (=)</option>
+            <option value="ne">Distinto (≠)</option>
+            <option value="gt">Mayor (&gt;)</option>
+            <option value="lt">Menor (&lt;)</option>
+            <option value="gte">Mayor o Igual (≥)</option>
+            <option value="lte">Menor o Igual (≤)</option>
+        `;
+        dateFormatGroup.style.display = 'none';
+        valueHint.textContent = 'Número a comparar (ej: 1000.50)';
+    } else if (dataType === 'date') {
+        // Date comparators
+        comparatorSelect.innerHTML = `
+            <option value="eq">Igual (=)</option>
+            <option value="ne">Distinto (≠)</option>
+            <option value="gt">Mayor (después de)</option>
+            <option value="lt">Menor (antes de)</option>
+            <option value="gte">Mayor o Igual</option>
+            <option value="lte">Menor o Igual</option>
+        `;
+        dateFormatGroup.style.display = 'block';
+        valueHint.textContent = 'Fecha a comparar en el formato especificado';
     }
 }

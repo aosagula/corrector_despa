@@ -371,6 +371,17 @@ class DocumentAPI {
         return getApiUrl(`/documents/provisional/${documentId}/images/${pageNumber}`);
     }
 
+    static async detectProvisionalPages(documentId) {
+        const response = await fetch(getApiUrl(`/documents/provisional/${documentId}/detect-pages`));
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Error al detectar páginas');
+        }
+
+        return await response.json();
+    }
+
     // Coordinates
     static async createCoordinate(coordinateData) {
         const response = await fetch(getApiUrl('/coordinates/'), {

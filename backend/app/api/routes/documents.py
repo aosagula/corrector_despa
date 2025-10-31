@@ -20,6 +20,7 @@ from ...services.ocr_service import ocr_service
 from ...services.llama_service import llama_service
 from ...services.vision_service import vision_service
 from ...services.pdf_to_image_service import pdf_to_image_service
+from ...services.page_type_detection_service import PageTypeDetectionService
 
 router = APIRouter()
 
@@ -458,3 +459,24 @@ async def get_provisional_document_image(
         raise HTTPException(status_code=404, detail=f"Imagen de página {page_number} no encontrada")
 
     return Response(content=image.image_data, media_type="image/png")
+
+
+@router.get("/provisional/{document_id}/detect-pages")
+async def detect_provisional_pages(
+    document_id: int,
+    db: Session = Depends(get_db)
+):
+    """Detecta el tipo de página de todas las imágenes de un documento provisorio"""
+    document = db.query(ProvisionalDocument).filter(ProvisionalDocument.id == document_id).first()
+
+    if not document:
+        raise HTTPException(status_code=404, detail="Documento no encontrado")
+
+    detection_service = PageTypeDetectionService(db)
+    results = detection_service.detect_document_pages(document_id)
+
+    return {
+        "document_id": document_id,
+        "filename": document.filename,
+        "pages": results
+    }
