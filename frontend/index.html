@@ -63,6 +63,12 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" id="page-types-tab" data-bs-toggle="pill"
+                           href="#page-types" role="tab">
+                            <i class="bi bi-file-earmark-ruled"></i> Tipos de Páginas
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" id="history-tab" data-bs-toggle="pill"
                            href="#history" role="tab">
                             <i class="bi bi-clock-history"></i> Historial
@@ -317,6 +323,26 @@
                         </div>
                     </div>
 
+                    <!-- Page Types Tab -->
+                    <div class="tab-pane fade" id="page-types" role="tabpanel">
+                        <h2>Gestión de Tipos de Páginas</h2>
+                        <p class="text-muted">Configura los tipos de páginas para documentos provisorios y sus reglas de detección automática.</p>
+
+                        <div class="card mb-4">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">Tipos de Páginas</h5>
+                                <button class="btn btn-primary btn-sm" onclick="showCreatePageTypeModal()">
+                                    <i class="bi bi-plus-circle"></i> Nuevo Tipo
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div id="pageTypesList">
+                                    <p class="text-muted">Cargando tipos de páginas...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- History Tab -->
                     <div class="tab-pane fade" id="history" role="tabpanel">
                         <h2>Historial de Comparaciones</h2>
@@ -488,6 +514,8 @@
     <script src="js/config.js"></script>
     <script src="js/api.js"></script>
     <script src="js/prompts.js"></script>
+    <script src="js/page-types.js"></script>
+    <script src="js/detection-rules.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

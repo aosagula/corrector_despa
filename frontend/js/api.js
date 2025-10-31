@@ -454,4 +454,128 @@ class DocumentAPI {
 
         return await response.json();
     }
+
+    // Page Types
+    static async createPageType(pageTypeData) {
+        const response = await fetch(getApiUrl('/page-types/'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(pageTypeData)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Error creating page type');
+        }
+
+        return await response.json();
+    }
+
+    static async listPageTypes() {
+        const response = await fetch(getApiUrl('/page-types/'));
+
+        if (!response.ok) {
+            throw new Error('Error fetching page types');
+        }
+
+        return await response.json();
+    }
+
+    static async getPageType(pageTypeId) {
+        const response = await fetch(getApiUrl(`/page-types/${pageTypeId}`));
+
+        if (!response.ok) {
+            throw new Error('Error fetching page type');
+        }
+
+        return await response.json();
+    }
+
+    static async updatePageType(pageTypeId, pageTypeData) {
+        const response = await fetch(getApiUrl(`/page-types/${pageTypeId}`), {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(pageTypeData)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Error updating page type');
+        }
+
+        return await response.json();
+    }
+
+    static async deletePageType(pageTypeId) {
+        const response = await fetch(getApiUrl(`/page-types/${pageTypeId}`), {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            throw new Error('Error deleting page type');
+        }
+
+        return await response.json();
+    }
+
+    // Detection Rules
+    static async createDetectionRule(pageTypeId, ruleData) {
+        const response = await fetch(getApiUrl(`/page-types/${pageTypeId}/rules`), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(ruleData)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Error creating detection rule');
+        }
+
+        return await response.json();
+    }
+
+    static async listDetectionRules(pageTypeId) {
+        const response = await fetch(getApiUrl(`/page-types/${pageTypeId}/rules`));
+
+        if (!response.ok) {
+            throw new Error('Error fetching detection rules');
+        }
+
+        return await response.json();
+    }
+
+    static async updateDetectionRule(ruleId, ruleData) {
+        const response = await fetch(getApiUrl(`/page-types/rules/${ruleId}`), {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(ruleData)
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || 'Error updating detection rule');
+        }
+
+        return await response.json();
+    }
+
+    static async deleteDetectionRule(ruleId) {
+        const response = await fetch(getApiUrl(`/page-types/rules/${ruleId}`), {
+            method: 'DELETE'
+        });
+
+        if (!response.ok) {
+            throw new Error('Error deleting detection rule');
+        }
+
+        return await response.json();
+    }
 }

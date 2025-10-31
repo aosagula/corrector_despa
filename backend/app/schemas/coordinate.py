@@ -5,8 +5,8 @@ from datetime import datetime
 
 class CoordinateBase(BaseModel):
     """Schema base para coordenadas de extracción"""
+    page_type_id: int = Field(..., description="ID del tipo de página")
     attribute_id: int = Field(..., description="ID del atributo asociado")
-    page_number: int = Field(..., ge=1, description="Número de página (1-based)")
     x1: int = Field(..., ge=0, description="Coordenada X superior izquierda")
     y1: int = Field(..., ge=0, description="Coordenada Y superior izquierda")
     x2: int = Field(..., gt=0, description="Coordenada X inferior derecha")
@@ -22,7 +22,7 @@ class CoordinateCreate(CoordinateBase):
 
 class CoordinateUpdate(BaseModel):
     """Schema para actualizar una coordenada"""
-    page_number: Optional[int] = Field(None, ge=1)
+    page_type_id: Optional[int] = None
     x1: Optional[int] = Field(None, ge=0)
     y1: Optional[int] = Field(None, ge=0)
     x2: Optional[int] = Field(None, gt=0)

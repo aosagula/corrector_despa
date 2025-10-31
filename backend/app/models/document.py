@@ -86,10 +86,51 @@ class ProvisionalDocumentImage(Base):
     image_data = Column(LargeBinary, nullable=False)  # Imagen en formato PNG B&N 300 DPI
     width = Column(Integer)  # Ancho de la imagen en píxeles
     height = Column(Integer)  # Alto de la imagen en píxeles
+    page_type_id = Column(Integer, ForeignKey("page_types.id"))  # Tipo de página detectado
+    detection_confidence = Column(Float)  # Confianza en la detección (0-1)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relaciones
     document = relationship("ProvisionalDocument", back_populates="images")
+    page_type = relationship("PageType")
+
+
+class PageType(Base):
+    """Modelo para tipos de páginas (caratula, items, percepcion, anexos, datos_adicionales)"""
+    __tablename__ = "page_types"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False, unique=True)  # caratula, items, percepcion, etc.
+    display_name = Column(String(200), nullable=False)  # Nombre para mostrar
+    description = Column(Text)  # Descripción del tipo de página
+    color = Column(String(20), default="#007bff")  # Color para visualización en UI
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relaciones
+    detection_rules = relationship("PageTypeDetectionRule", back_populates="page_type", cascade="all, delete-orphan")
+    coordinates = relationship("AttributeExtractionCoordinate", back_populates="page_type", cascade="all, delete-orphan")
+
+
+class PageTypeDetectionRule(Base):
+    """Modelo para reglas de detección automática de tipos de páginas"""
+    __tablename__ = "page_type_detection_rules"
+
+    id = Column(Integer, primary_key=True, index=True)
+    page_type_id = Column(Integer, ForeignKey("page_types.id"), nullable=False)
+    attribute_name = Column(String(100), nullable=False)  # Nombre del atributo a buscar
+    x1 = Column(Integer, nullable=False)  # Coordenada del box de detección
+    y1 = Column(Integer, nullable=False)
+    x2 = Column(Integer, nullable=False)
+    y2 = Column(Integer, nullable=False)
+    expected_value = Column(String(500))  # Valor esperado (puede ser regex o texto exacto)
+    match_type = Column(String(20), default="contains")  # contains, exact, regex
+    priority = Column(Integer, default=0)  # Prioridad de la regla (mayor = más importante)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relaciones
+    page_type = relationship("PageType", back_populates="detection_rules")
 
 
 class AttributeExtractionCoordinate(Base):
@@ -97,8 +138,8 @@ class AttributeExtractionCoordinate(Base):
     __tablename__ = "attribute_extraction_coordinates"
 
     id = Column(Integer, primary_key=True, index=True)
+    page_type_id = Column(Integer, ForeignKey("page_types.id"), nullable=False)  # Asociado a tipo de página
     attribute_id = Column(Integer, ForeignKey("configurable_attributes.id"), nullable=False)
-    page_number = Column(Integer, nullable=False)  # Número de página donde se encuentra el atributo
     x1 = Column(Integer, nullable=False)  # Coordenada superior izquierda X
     y1 = Column(Integer, nullable=False)  # Coordenada superior izquierda Y
     x2 = Column(Integer, nullable=False)  # Coordenada inferior derecha X
@@ -107,6 +148,9 @@ class AttributeExtractionCoordinate(Base):
     description = Column(Text)  # Descripción de qué se extrae en esta área
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relaciones
+    page_type = relationship("PageType", back_populates="coordinates")
 
 
 class PromptTemplate(Base):
