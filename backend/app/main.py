@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, status
+from fastapi import FastAPI, Request, status, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
@@ -13,10 +13,10 @@ from .core.database import engine, Base, SessionLocal
 from .api.routes import documents, comparisons, attributes, prompts, coordinates, page_types
 from .services.prompt_service import PromptService
 
-# Configurar logging
+# Configurar logging con información detallada de archivo y línea
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s'
 )
 
 logger = logging.getLogger(__name__)
@@ -97,7 +97,14 @@ async def global_exception_handler(request: Request, exc: Exception):
     """
     Manejador global de excepciones que respeta el ERROR_LEVEL configurado
     """
-    logger.error(f"Error no manejado: {str(exc)}", exc_info=True)
+    # Log con traceback completo
+    logger.error("=" * 80)
+    logger.error(f"Exception no manejada en {request.method} {request.url.path}")
+    logger.error(f"Tipo de excepción: {type(exc).__name__}")
+    logger.error(f"Mensaje: {str(exc)}")
+    logger.error("Stack trace completo:")
+    logger.error(traceback.format_exc())
+    logger.error("=" * 80)
 
     if settings.ERROR_LEVEL == "development":
         # En desarrollo, mostrar detalles completos del error
@@ -116,11 +123,58 @@ async def global_exception_handler(request: Request, exc: Exception):
             content={"detail": "Internal Server Error"}
         )
 
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """
+    Manejador de HTTPException para registrar errores 400, 404, etc.
+    """
+    # Log todos los errores HTTP con traceback completo
+    logger.error("=" * 80)
+    logger.error(f"HTTPException {exc.status_code} en {request.method} {request.url.path}")
+    logger.error(f"Detalle: {exc.detail}")
+
+    # Extraer el stack trace completo
+    import sys
+    tb = sys.exc_info()[2]
+    if tb is not None:
+        logger.error("Stack trace completo:")
+        for line in traceback.format_tb(tb):
+            logger.error(line.rstrip())
+    else:
+        # Si no hay traceback en sys.exc_info, usar el stack actual
+        logger.error("Stack trace desde el punto de llamada:")
+        for line in traceback.format_stack()[:-1]:
+            logger.error(line.rstrip())
+
+    logger.error(f"Headers: {dict(request.headers)}")
+    logger.error("=" * 80)
+
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail}
+    )
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """
     Manejador de errores de validación de request
     """
+    # Log detallado del error de validación
+    logger.error("=" * 80)
+    logger.error(f"RequestValidationError en {request.method} {request.url.path}")
+    logger.error(f"Errores de validación:")
+    for error in exc.errors():
+        logger.error(f"  - Campo: {error.get('loc')}")
+        logger.error(f"    Tipo: {error.get('type')}")
+        logger.error(f"    Mensaje: {error.get('msg')}")
+    logger.error(f"Body recibido: {exc.body}")
+
+    # Stack trace
+    logger.error("Stack trace completo:")
+    for line in traceback.format_stack()[:-1]:
+        logger.error(line.rstrip())
+    logger.error("=" * 80)
+
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
