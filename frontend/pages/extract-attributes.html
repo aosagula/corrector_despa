@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Extraer Atributos - Corrector</title>
+    <link rel="icon" type="image/ico" href="../images/app_icon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <div id="navbar-container"></div>
+    <div id="sidebar-container"></div>
+
+    <div class="main-content-wrapper" id="main-content">
+        <h2><i class="bi bi-file-text"></i> Extraer Atributos del Provisorio</h2>
+        <p class="text-muted">Selecciona un documento provisorio para extraer todos sus atributos configurados y guardarlos en formato JSON.</p>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="provisionalSelect" class="form-label"><strong>Documento Provisorio:</strong></label>
+                        <select class="form-select" id="provisionalSelect">
+                            <option value="">Seleccionar documento...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 mb-3 d-flex align-items-end">
+                        <button class="btn btn-primary" id="extractBtn" disabled>
+                            <i class="bi bi-play-circle"></i> Extraer Atributos
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress -->
+        <div id="extractionProgress" style="display: none;" class="card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">Extrayendo...</h5>
+                <div class="progress">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated"
+                         role="progressbar"
+                         id="progressBar"
+                         style="width: 0%">
+                         <span id="progressText">0%</span>
+                    </div>
+                </div>
+                <p class="mt-2 mb-0 text-muted" id="progressStatus">Iniciando extracción...</p>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="extractionResults" style="display: none;">
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-check-circle text-success"></i> Atributos Extraídos</h5>
+                    <div>
+                        <button class="btn btn-sm btn-success" id="saveBtn">
+                            <i class="bi bi-save"></i> Guardar en Base de Datos
+                        </button>
+                        <button class="btn btn-sm btn-secondary" id="downloadJsonBtn">
+                            <i class="bi bi-download"></i> Descargar JSON
+                        </button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <h6>Resumen:</h6>
+                            <div id="extractionSummary"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">JSON Extraído</h5>
+                </div>
+                <div class="card-body">
+                    <pre id="jsonOutput" class="bg-light p-3" style="max-height: 500px; overflow-y: auto;"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+        <div id="toastContainer"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../js/config.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/modules/components.js"></script>
+    <script src="../js/modules/utils.js"></script>
+    <script src="../js/modules/extract-attributes.js"></script>
+</body>
+</html>

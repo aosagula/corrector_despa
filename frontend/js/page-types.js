@@ -1,8 +1,21 @@
 // Page Types Management
 
-// Load page types when tab is shown
-document.getElementById('page-types-tab').addEventListener('shown.bs.tab', function () {
-    loadPageTypes();
+// Load page types when page is ready or tab is shown
+document.addEventListener('DOMContentLoaded', function() {
+    const pageTypesTab = document.getElementById('page-types-tab');
+
+    if (pageTypesTab) {
+        // Tab-based interface
+        pageTypesTab.addEventListener('shown.bs.tab', function () {
+            loadPageTypes();
+        });
+    }
+
+    // If page types list exists on page load, load immediately (standalone page)
+    const pageTypesList = document.getElementById('pageTypesList');
+    if (pageTypesList) {
+        loadPageTypes();
+    }
 });
 
 // Load all page types

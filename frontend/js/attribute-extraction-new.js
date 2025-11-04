@@ -5,7 +5,7 @@ let selectedPageNumber = 1;
 let attributeCanvas = null;
 let attributeCtx = null;
 let attributeImage = null;
-let attributeZoom = 1.0;
+let attributeZoom = 0.4; // Default zoom 40%
 let isDrawingAttribute = false;
 let drawStartX = 0;
 let drawStartY = 0;
@@ -24,18 +24,40 @@ let currentPageIndex = 0; // Índice actual en matchingPages
 
 // Main function to show the attribute configuration screen
 async function showAttributeConfiguration() {
+    const container = document.getElementById('attribute-config-content');
+    if (!container) {
+        console.error('Container attribute-config-content not found');
+        return;
+    }
+
     try {
         // Get page types
         const pageTypes = await DocumentAPI.listPageTypes();
         if (pageTypes.length === 0) {
-            showToast('Primero debes crear tipos de páginas', 'warning');
+            container.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i> Primero debes crear tipos de páginas.
+                    <br>
+                    <a href="../pages/page-types.html" class="btn btn-sm btn-primary mt-2">
+                        <i class="bi bi-plus-circle"></i> Crear Tipos de Páginas
+                    </a>
+                </div>
+            `;
             return;
         }
 
         // Get documents
         const documents = await DocumentAPI.listProvisionalDocuments();
         if (documents.length === 0) {
-            showToast('Primero debes subir documentos provisorios', 'warning');
+            container.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i> Primero debes subir documentos provisorios.
+                    <br>
+                    <a href="../pages/upload-provisional.html" class="btn btn-sm btn-primary mt-2">
+                        <i class="bi bi-upload"></i> Subir Documento Provisorio
+                    </a>
+                </div>
+            `;
             return;
         }
 
@@ -47,17 +69,7 @@ async function showAttributeConfiguration() {
             `<option value="${doc.id}">${doc.filename}</option>`
         ).join('');
 
-        const modalHtml = `
-            <div class="modal fade" id="attributeConfigModal" tabindex="-1">
-                <div class="modal-dialog modal-fullscreen">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">
-                                <i class="bi bi-gear"></i> Configurar Atributos de Extracción
-                            </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
+        const contentHtml = `
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label class="form-label"><strong>Documento Provisorio:</strong></label>
@@ -87,7 +99,7 @@ async function showAttributeConfiguration() {
                                                     <button class="btn btn-outline-secondary" onclick="changeAttributeZoom(-0.1)">
                                                         <i class="bi bi-zoom-out"></i>
                                                     </button>
-                                                    <button class="btn btn-outline-secondary" id="attrZoomDisplay">100%</button>
+                                                    <button class="btn btn-outline-secondary" id="attrZoomDisplay">40%</button>
                                                     <button class="btn btn-outline-secondary" onclick="changeAttributeZoom(0.1)">
                                                         <i class="bi bi-zoom-in"></i>
                                                     </button>
@@ -175,31 +187,22 @@ async function showAttributeConfiguration() {
                                 </div>
                             </div>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                            <button type="button" class="btn btn-success" onclick="saveAllAttributes()" id="saveAllBtn" disabled>
-                                <i class="bi bi-save"></i> Guardar Todos los Atributos
-                            </button>
-                        </div>
-                    </div>
+                <div class="mt-3">
+                    <button type="button" class="btn btn-success" onclick="saveAllAttributes()" id="saveAllBtn" disabled>
+                        <i class="bi bi-save"></i> Guardar Todos los Atributos
+                    </button>
                 </div>
-            </div>
         `;
 
-        const existing = document.getElementById('attributeConfigModal');
-        if (existing) existing.remove();
-
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        const modal = new bootstrap.Modal(document.getElementById('attributeConfigModal'));
-        modal.show();
-
-        document.getElementById('attributeConfigModal').addEventListener('hidden.bs.modal', function() {
-            this.remove();
-        });
+        container.innerHTML = contentHtml;
 
     } catch (error) {
         console.error('Error:', error);
-        showToast('Error al abrir configuración: ' + error.message, 'error');
+        container.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-x-circle"></i> Error al cargar la configuración: ${error.message}
+            </div>
+        `;
     }
 }
 
@@ -878,3 +881,12 @@ async function saveAllAttributes() {
         showToast('Error al guardar atributos: ' + error.message, 'error');
     }
 }
+
+// Auto-load attribute configuration when on standalone page
+document.addEventListener('DOMContentLoaded', function() {
+    const attributeConfigContent = document.getElementById('attribute-config-content');
+    if (attributeConfigContent) {
+        // Show immediately on standalone page
+        showAttributeConfiguration();
+    }
+});

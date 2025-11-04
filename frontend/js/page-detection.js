@@ -5,16 +5,30 @@ let currentDetectionPage = 0;
 let detectionCanvas = null;
 let detectionCtx = null;
 let detectionImage = null;
-let detectionZoom = 1.0;
+let detectionZoom = 0.4; // Default zoom 40%
 
 // Show page detection viewer
 async function showPageDetectionViewer() {
+    const container = document.getElementById('page-detection-content');
+    if (!container) {
+        console.error('Container page-detection-content not found');
+        return;
+    }
+
     try {
         // Get list of provisional documents
         const documents = await DocumentAPI.listProvisionalDocuments();
 
         if (documents.length === 0) {
-            showToast('No hay documentos provisorios disponibles', 'warning');
+            container.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i> No hay documentos provisorios disponibles.
+                    <br>
+                    <a href="../pages/upload-provisional.html" class="btn btn-sm btn-primary mt-2">
+                        <i class="bi bi-upload"></i> Subir Documento Provisorio
+                    </a>
+                </div>
+            `;
             return;
         }
 
@@ -22,17 +36,7 @@ async function showPageDetectionViewer() {
             `<option value="${doc.id}">${doc.filename}</option>`
         ).join('');
 
-        const modalHtml = `
-            <div class="modal fade" id="pageDetectionModal" tabindex="-1">
-                <div class="modal-dialog modal-fullscreen">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title">
-                                <i class="bi bi-file-earmark-check"></i> Detección de Tipos de Página
-                            </h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                        </div>
-                        <div class="modal-body">
+        const contentHtml = `
                             <div class="row mb-3">
                                 <div class="col-md-6">
                                     <label class="form-label">Seleccionar Documento:</label>
@@ -66,7 +70,7 @@ async function showPageDetectionViewer() {
                                                         <i class="bi bi-zoom-out"></i> -
                                                     </button>
                                                     <button type="button" class="btn btn-sm btn-outline-secondary" id="detectionZoomBtn">
-                                                        100%
+                                                        40%
                                                     </button>
                                                     <button type="button" class="btn btn-sm btn-outline-secondary" onclick="changeDetectionZoom(0.1)">
                                                         <i class="bi bi-zoom-in"></i> +
@@ -112,38 +116,23 @@ async function showPageDetectionViewer() {
                                 <p class="mt-3">Detectando tipos de página...</p>
                             </div>
                         </div>
-                        <div class="modal-footer">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
         `;
 
-        const existingModal = document.getElementById('pageDetectionModal');
-        if (existingModal) {
-            existingModal.remove();
+        container.innerHTML = contentHtml;
+
+        // Initialize canvas after DOM insertion
+        detectionCanvas = document.getElementById('detectionCanvas');
+        if (detectionCanvas) {
+            detectionCtx = detectionCanvas.getContext('2d');
         }
 
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
-        const modal = new bootstrap.Modal(document.getElementById('pageDetectionModal'));
-        modal.show();
-
-        // Initialize canvas
-        detectionCanvas = document.getElementById('detectionCanvas');
-        detectionCtx = detectionCanvas.getContext('2d');
-
-        document.getElementById('pageDetectionModal').addEventListener('hidden.bs.modal', function () {
-            currentDetectionDocument = null;
-            currentDetectionData = null;
-            currentDetectionPage = 0;
-            detectionImage = null;
-            detectionZoom = 1.0;
-            this.remove();
-        });
     } catch (error) {
         console.error('Error:', error);
-        showToast('Error al abrir visor de detección: ' + error.message, 'error');
+        container.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="bi bi-x-circle"></i> Error al cargar el visor: ${error.message}
+            </div>
+        `;
     }
 }
 
@@ -165,7 +154,7 @@ async function loadDetectionDocument() {
         currentDetectionDocument = parseInt(docId);
         currentDetectionData = result;
         currentDetectionPage = 0;
-        detectionZoom = 1.0;
+        detectionZoom = 0.4; // Reset to default 40% zoom
 
         // Show info
         document.getElementById('detectionFileName').textContent = result.filename;
@@ -358,3 +347,12 @@ function changeDetectionZoom(delta) {
     document.getElementById('detectionZoomBtn').textContent = `${Math.round(detectionZoom * 100)}%`;
     renderDetectionCanvas();
 }
+
+// Auto-load page detection viewer when on standalone page
+document.addEventListener('DOMContentLoaded', function() {
+    const pageDetectionContent = document.getElementById('page-detection-content');
+    if (pageDetectionContent) {
+        // Show immediately on standalone page
+        showPageDetectionViewer();
+    }
+});

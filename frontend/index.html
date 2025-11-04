@@ -16,474 +16,104 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">
-                <i class="bi bi-file-earmark-check"></i>
-                Corrector de Documentos
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-        </div>
-    </nav>
+    <!-- Navigation Component -->
+    <div id="navbar-container"></div>
 
-    <!-- Main Container -->
-    <div class="container-fluid mt-4">
-        <div class="row">
-            <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 bg-light sidebar">
-                <ul class="nav flex-column nav-pills" id="mainTabs" role="tablist">
-                    <li class="nav-item">
-                        <a class="nav-link active" id="upload-commercial-tab" data-bs-toggle="pill"
-                           href="#upload-commercial" role="tab">
-                            <i class="bi bi-cloud-upload"></i> Documentos Comerciales
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="upload-provisional-tab" data-bs-toggle="pill"
-                           href="#upload-provisional" role="tab">
-                            <i class="bi bi-file-earmark-plus"></i> Documento Provisorio
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="compare-tab" data-bs-toggle="pill"
-                           href="#compare" role="tab">
-                            <i class="bi bi-arrow-left-right"></i> Comparar
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="prompts-tab" data-bs-toggle="pill"
-                           href="#prompts" role="tab">
-                            <i class="bi bi-chat-left-text"></i> Gestión de Prompts
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="page-types-tab" data-bs-toggle="pill"
-                           href="#page-types" role="tab">
-                            <i class="bi bi-file-earmark-ruled"></i> Tipos de Páginas
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="page-detection-tab" data-bs-toggle="pill"
-                           href="#" role="tab" onclick="showPageDetectionViewer(); return false;">
-                            <i class="bi bi-file-earmark-check"></i> Detectar Páginas
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="attribute-extraction-tab" data-bs-toggle="pill"
-                           href="#" role="tab" onclick="showAttributeConfiguration(); return false;">
-                            <i class="bi bi-bounding-box"></i> Configurar Atributos de Extracción
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" id="history-tab" data-bs-toggle="pill"
-                           href="#history" role="tab">
-                            <i class="bi bi-clock-history"></i> Historial
-                        </a>
-                    </li>
-                </ul>
-            </div>
+    <!-- Sidebar Component -->
+    <div id="sidebar-container"></div>
 
-            <!-- Main Content -->
-            <div class="col-md-9 col-lg-10">
-                <div class="tab-content" id="mainTabsContent">
-                    <!-- Upload Commercial Documents Tab -->
-                    <div class="tab-pane fade show active" id="upload-commercial" role="tabpanel">
-                        <h2>Documentos Comerciales</h2>
-                        <p class="text-muted">Sube facturas, órdenes de compra, certificados de origen y otros documentos comerciales.</p>
+    <!-- Main Content Area -->
+    <div class="main-content-wrapper" id="main-content">
+                <!-- Dashboard/Home Content -->
+                <div class="row">
+                    <div class="col-12 mb-4">
+                        <h2><i class="bi bi-house-door"></i> Dashboard</h2>
+                        <p class="text-muted">Bienvenido al sistema de corrección de documentos comerciales</p>
+                    </div>
 
-                        <div class="card mb-4">
+                    <!-- Quick Stats -->
+                    <div class="col-md-6 col-lg-3 mb-4">
+                        <div class="card text-center h-100">
                             <div class="card-body">
-                                <h5 class="card-title">Subir Nuevo Documento</h5>
-                                <form id="commercialUploadForm">
-                                    <div class="mb-3">
-                                        <label for="commercialReference" class="form-label">Referencia (opcional)</label>
-                                        <input class="form-control" type="text" id="commercialReference" placeholder="Ej: OC-2024-001, Lote-ABC">
-                                        <small class="text-muted">Identifica documentos relacionados para comparación</small>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="commercialFile" class="form-label">Seleccionar archivo (PDF, PNG, JPG)</label>
-                                        <input class="form-control" type="file" id="commercialFile" accept=".pdf,.png,.jpg,.jpeg" required>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-upload"></i> Subir y Procesar
-                                    </button>
-                                </form>
-                                <div id="commercialUploadProgress" class="mt-3" style="display: none;">
-                                    <div class="progress">
-                                        <div class="progress-bar progress-bar-striped progress-bar-animated"
-                                             role="progressbar" style="width: 100%"></div>
-                                    </div>
-                                    <p class="mt-2 text-center">Procesando documento...</p>
-                                </div>
-                                <div id="commercialUploadResult" class="mt-3"></div>
+                                <i class="bi bi-file-earmark-text display-4 text-primary"></i>
+                                <h3 class="mt-3" id="stat-commercial-docs">0</h3>
+                                <p class="text-muted mb-0">Documentos Comerciales</p>
                             </div>
                         </div>
+                    </div>
 
-                        <!-- List of Commercial Documents -->
+                    <div class="col-md-6 col-lg-3 mb-4">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="bi bi-file-earmark-plus display-4 text-success"></i>
+                                <h3 class="mt-3" id="stat-provisional-docs">0</h3>
+                                <p class="text-muted mb-0">Documentos Provisorios</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-3 mb-4">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="bi bi-arrow-left-right display-4 text-info"></i>
+                                <h3 class="mt-3" id="stat-comparisons">0</h3>
+                                <p class="text-muted mb-0">Comparaciones</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6 col-lg-3 mb-4">
+                        <div class="card text-center h-100">
+                            <div class="card-body">
+                                <i class="bi bi-chat-left-text display-4 text-warning"></i>
+                                <h3 class="mt-3" id="stat-prompts">0</h3>
+                                <p class="text-muted mb-0">Prompts Activos</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Actions -->
+                    <div class="col-12 mb-4">
                         <div class="card">
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="bi bi-lightning"></i> Acciones Rápidas</h5>
+                            </div>
                             <div class="card-body">
-                                <h5 class="card-title">Documentos Subidos</h5>
-                                <div id="commercialDocumentsList">
-                                    <p class="text-muted">Cargando documentos...</p>
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <a href="pages/upload-commercial.html" class="btn btn-primary w-100 btn-lg">
+                                            <i class="bi bi-cloud-upload"></i> Subir Documento Comercial
+                                        </a>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <a href="pages/upload-provisional.html" class="btn btn-success w-100 btn-lg">
+                                            <i class="bi bi-file-earmark-plus"></i> Subir Provisorio
+                                        </a>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <a href="pages/compare.html" class="btn btn-info w-100 btn-lg">
+                                            <i class="bi bi-arrow-left-right"></i> Comparar Documentos
+                                        </a>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Upload Provisional Document Tab -->
-                    <div class="tab-pane fade" id="upload-provisional" role="tabpanel">
-                        <h2>Documento Provisorio</h2>
-                        <p class="text-muted">Sube el documento que deseas validar contra los documentos comerciales.</p>
-
-                        <div class="card mb-4">
-                            <div class="card-body">
-                                <h5 class="card-title">Subir Documento Provisorio</h5>
-                                <form id="provisionalUploadForm">
-                                    <div class="mb-3">
-                                        <label for="provisionalReference" class="form-label">Referencia (opcional)</label>
-                                        <input class="form-control" type="text" id="provisionalReference" placeholder="Ej: OC-2024-001, Lote-ABC">
-                                        <small class="text-muted">Debe coincidir con la referencia del documento comercial</small>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="provisionalFile" class="form-label">Seleccionar archivo (PDF, PNG, JPG)</label>
-                                        <input class="form-control" type="file" id="provisionalFile" accept=".pdf,.png,.jpg,.jpeg" required>
-                                    </div>
-                                    <button type="submit" class="btn btn-success">
-                                        <i class="bi bi-upload"></i> Subir Documento
-                                    </button>
-                                </form>
-                                <div id="provisionalUploadProgress" class="mt-3" style="display: none;">
-                                    <div class="progress">
-                                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-success"
-                                             role="progressbar" style="width: 100%"></div>
-                                    </div>
-                                    <p class="mt-2 text-center">Procesando documento...</p>
-                                </div>
-                                <div id="provisionalUploadResult" class="mt-3"></div>
-                            </div>
-                        </div>
-
-                        <!-- List of Provisional Documents -->
+                    <!-- Recent Activity -->
+                    <div class="col-12">
                         <div class="card">
-                            <div class="card-body">
-                                <h5 class="card-title">Documentos Provisorios</h5>
-                                <div id="provisionalDocumentsList">
-                                    <p class="text-muted">Cargando documentos...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Compare Tab -->
-                    <div class="tab-pane fade" id="compare" role="tabpanel">
-                        <h2>Comparar Documentos</h2>
-                        <p class="text-muted">Compara un documento provisorio con los documentos comerciales.</p>
-
-                        <div class="card mb-4">
-                            <div class="card-body">
-                                <h5 class="card-title">Nueva Comparación</h5>
-                                <form id="compareForm">
-                                    <div class="row">
-                                        <div class="col-md-6 mb-3">
-                                            <label for="selectCommercial" class="form-label">Documento Comercial</label>
-                                            <select class="form-select" id="selectCommercial" required>
-                                                <option value="">Seleccionar...</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label for="selectProvisional" class="form-label">Documento Provisorio</label>
-                                            <select class="form-select" id="selectProvisional" required>
-                                                <option value="">Seleccionar...</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-arrow-left-right"></i> Comparar
-                                    </button>
-                                    <button type="button" class="btn btn-secondary" id="batchCompareBtn">
-                                        <i class="bi bi-files"></i> Comparar con Todos
-                                    </button>
-                                </form>
-                                <div id="compareProgress" class="mt-3" style="display: none;">
-                                    <div class="progress">
-                                        <div class="progress-bar progress-bar-striped progress-bar-animated"
-                                             role="progressbar" style="width: 100%"></div>
-                                    </div>
-                                    <p class="mt-2 text-center">Comparando documentos...</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Comparison Results -->
-                        <div id="comparisonResults"></div>
-                    </div>
-
-                    <!-- Attributes Configuration Tab -->
-                    <div class="tab-pane fade" id="attributes" role="tabpanel">
-                        <h2>Configurar Atributos</h2>
-                        <p class="text-muted">Define qué atributos se deben comparar entre documentos.</p>
-
-                        <div class="card mb-4">
-                            <div class="card-body">
-                                <h5 class="card-title">Agregar Atributo</h5>
-                                <form id="attributeForm">
-                                    <div class="row">
-                                        <div class="col-md-6 mb-3">
-                                            <label for="attrName" class="form-label">Nombre del Atributo</label>
-                                            <input type="text" class="form-control" id="attrName" required>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <label for="attrKey" class="form-label">Clave en JSON</label>
-                                            <input type="text" class="form-control" id="attrKey" required>
-                                            <small class="text-muted">Ej: fecha, monto_total, proveedor</small>
-                                        </div>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label for="attrDescription" class="form-label">Descripción</label>
-                                        <textarea class="form-control" id="attrDescription" rows="2"></textarea>
-                                    </div>
-                                    <div class="row">
-                                        <div class="col-md-6 mb-3">
-                                            <label for="attrType" class="form-label">Tipo de Validación</label>
-                                            <select class="form-select" id="attrType">
-                                                <option value="text">Texto</option>
-                                                <option value="numeric">Numérico</option>
-                                                <option value="date">Fecha</option>
-                                            </select>
-                                        </div>
-                                        <div class="col-md-6 mb-3">
-                                            <div class="form-check mt-4">
-                                                <input class="form-check-input" type="checkbox" id="attrRequired">
-                                                <label class="form-check-label" for="attrRequired">
-                                                    Campo requerido
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-plus-circle"></i> Agregar Atributo
-                                    </button>
-                                    <button type="button" class="btn btn-secondary" id="createDefaultsBtn">
-                                        <i class="bi bi-download"></i> Cargar Atributos por Defecto
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-
-                        <!-- List of Attributes -->
-                        <div class="card">
-                            <div class="card-body">
-                                <h5 class="card-title">Atributos Configurados</h5>
-                                <div id="attributesList">
-                                    <p class="text-muted">Cargando atributos...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Prompts Management Tab -->
-                    <div class="tab-pane fade" id="prompts" role="tabpanel">
-                        <h2>Gestión de Prompts</h2>
-                        <p class="text-muted">Administra los prompts de clasificación y extracción de datos.</p>
-
-                        <!-- Filter and Actions -->
-                        <div class="card mb-4">
-                            <div class="card-body">
-                                <div class="row align-items-end">
-                                    <div class="col-md-4 mb-2">
-                                        <label for="promptTypeFilter" class="form-label">Filtrar por Tipo</label>
-                                        <select class="form-select" id="promptTypeFilter">
-                                            <option value="">Todos</option>
-                                            <option value="classification">Clasificación</option>
-                                            <option value="extraction">Extracción</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-4 mb-2">
-                                        <div class="form-check mt-4">
-                                            <input class="form-check-input" type="checkbox" id="activeOnlyFilter">
-                                            <label class="form-check-label" for="activeOnlyFilter">
-                                                Solo activos
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4 mb-2">
-                                        <button type="button" class="btn btn-primary me-2" id="createPromptBtn">
-                                            <i class="bi bi-plus-circle"></i> Nuevo Prompt
-                                        </button>
-                                        <button type="button" class="btn btn-secondary" id="initDefaultPromptsBtn">
-                                            <i class="bi bi-download"></i> Inicializar Defaults
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Prompts List -->
-                        <div class="card">
-                            <div class="card-body">
-                                <h5 class="card-title">Prompts Configurados</h5>
-                                <div id="promptsList">
-                                    <p class="text-muted">Cargando prompts...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Page Types Tab -->
-                    <div class="tab-pane fade" id="page-types" role="tabpanel">
-                        <h2>Gestión de Tipos de Páginas</h2>
-                        <p class="text-muted">Configura los tipos de páginas para documentos provisorios y sus reglas de detección automática.</p>
-
-                        <div class="card mb-4">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <h5 class="mb-0">Tipos de Páginas</h5>
-                                <button class="btn btn-primary btn-sm" onclick="showCreatePageTypeModal()">
-                                    <i class="bi bi-plus-circle"></i> Nuevo Tipo
-                                </button>
+                            <div class="card-header">
+                                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Actividad Reciente</h5>
                             </div>
                             <div class="card-body">
-                                <div id="pageTypesList">
-                                    <p class="text-muted">Cargando tipos de páginas...</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- History Tab -->
-                    <div class="tab-pane fade" id="history" role="tabpanel">
-                        <h2>Historial de Comparaciones</h2>
-                        <p class="text-muted">Revisa las comparaciones realizadas anteriormente.</p>
-
-                        <div class="card">
-                            <div class="card-body">
-                                <div id="historyList">
-                                    <p class="text-muted">Cargando historial...</p>
+                                <div id="recent-activity">
+                                    <p class="text-muted">Cargando actividad reciente...</p>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Prompt Modal -->
-    <div class="modal fade" id="promptModal" tabindex="-1" aria-labelledby="promptModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="promptModalLabel">Prompt</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="promptForm">
-                        <input type="hidden" id="promptId">
-
-                        <div class="mb-3">
-                            <label for="promptName" class="form-label">Nombre del Prompt</label>
-                            <input type="text" class="form-control" id="promptName" required>
-                            <small class="text-muted">Ej: extraction_factura_v2, classification_custom</small>
-                        </div>
-
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="promptType" class="form-label">Tipo</label>
-                                <select class="form-select" id="promptType" required>
-                                    <option value="">Seleccionar...</option>
-                                    <option value="classification">Clasificación</option>
-                                    <option value="extraction">Extracción</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="promptDocumentType" class="form-label">Tipo de Documento</label>
-                                <select class="form-select" id="promptDocumentType">
-                                    <option value="">N/A (solo para extracción)</option>
-                                    <option value="invoice">Factura</option>
-                                    <option value="purchase_order">Orden de Compra</option>
-                                    <option value="certificate_of_origin">Certificado de Origen</option>
-                                    <option value="technical_specification">Especificación Técnica</option>
-                                    <option value="contract">Contrato</option>
-                                    <option value="certificate_of_analysis">Certificado de Análisis</option>
-                                    <option value="packing_list">Listado de Productos (Packing List)</option>
-                                    <option value="transport_document">Documento de Transporte (bill of lading)</option>
-
-                                </select>
-                                <small class="text-muted">Requerido para prompts de extracción</small>
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="promptTemplate" class="form-label">Template del Prompt</label>
-                            <textarea class="form-control font-monospace" id="promptTemplate" rows="12" required></textarea>
-                            <small class="text-muted">
-                                Variables disponibles: {{text_content}}, {{document_type}}
-                            </small>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="promptDescription" class="form-label">Descripción</label>
-                            <textarea class="form-control" id="promptDescription" rows="2"></textarea>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="responseFormat" class="form-label">Formato de Respuesta</label>
-                            <select class="form-select" id="responseFormat">
-                                <option value="text">Texto</option>
-                                <option value="json">JSON</option>
-                            </select>
-                            <small class="text-muted">Formato esperado de la respuesta del modelo</small>
-                        </div>
-
-                        <div class="mb-3" id="jsonSchemaContainer" style="display: none;">
-                            <label for="jsonSchema" class="form-label">Esquema JSON de Ejemplo</label>
-                            <textarea class="form-control font-monospace" id="jsonSchema" rows="10" placeholder='{\n  "campo1": "valor1",\n  "campo2": 123,\n  "campo3": null\n}'></textarea>
-                            <small class="text-muted d-block mb-2">
-                                Define la estructura JSON que el modelo debe seguir
-                            </small>
-                            <button type="button" class="btn btn-sm btn-outline-primary" id="validateJsonBtn">
-                                <i class="bi bi-check-circle"></i> Validar JSON
-                            </button>
-                            <span id="jsonValidationMessage" class="ms-2"></span>
-                        </div>
-
-                        <div class="form-check mb-3">
-                            <input class="form-check-input" type="checkbox" id="promptIsActive">
-                            <label class="form-check-label" for="promptIsActive">
-                                Prompt activo
-                            </label>
-                            <small class="form-text d-block text-muted">
-                                Solo puede haber un prompt activo por tipo/documento
-                            </small>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="savePromptBtn">Guardar</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Prompt Detail Modal -->
-    <div class="modal fade" id="promptDetailModal" tabindex="-1" aria-labelledby="promptDetailModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="promptDetailModalLabel">Detalle del Prompt</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body" id="promptDetailContent">
-                    <!-- Content will be filled by JavaScript -->
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                </div>
-            </div>
-        </div>
     </div>
 
     <!-- Toast Container -->
@@ -491,42 +121,12 @@
         <div id="toastContainer"></div>
     </div>
 
-    <!-- Confirm Delete Modal -->
-    <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title" id="confirmDeleteModalLabel">
-                        <i class="bi bi-exclamation-triangle"></i> Confirmar Eliminación
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p id="confirmDeleteMessage">¿Estás seguro de que deseas eliminar este elemento?</p>
-                    <p class="text-muted mb-0"><small>Esta acción no se puede deshacer.</small></p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                        <i class="bi bi-x-circle"></i> Cancelar
-                    </button>
-                    <button type="button" class="btn btn-danger" id="confirmDeleteBtn">
-                        <i class="bi bi-trash"></i> Eliminar
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Custom JS -->
     <script src="js/config.js"></script>
     <script src="js/api.js"></script>
-    <script src="js/app.js"></script>
-    <script src="js/prompts.js"></script>
-    <script src="js/page-types.js"></script>
-    <script src="js/detection-rules.js"></script>
-    <script src="js/page-detection.js"></script>
-    <script src="js/attribute-extraction-new.js"></script>
+    <script src="js/modules/components.js"></script>
+    <script src="js/modules/dashboard.js"></script>
 </body>
 </html>

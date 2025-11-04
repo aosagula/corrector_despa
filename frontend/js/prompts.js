@@ -19,15 +19,29 @@ class PromptsManager {
 
     setupEventListeners() {
         // Initialize modals
-        this.promptModal = new bootstrap.Modal(document.getElementById('promptModal'));
-        this.promptDetailModal = new bootstrap.Modal(document.getElementById('promptDetailModal'));
+        const promptModalElement = document.getElementById('promptModal');
+        const promptDetailModalElement = document.getElementById('promptDetailModal');
 
-        // Tab activation - load prompts when tab is shown
+        if (promptModalElement) {
+            this.promptModal = new bootstrap.Modal(promptModalElement);
+        }
+        if (promptDetailModalElement) {
+            this.promptDetailModal = new bootstrap.Modal(promptDetailModalElement);
+        }
+
+        // Load prompts immediately when page loads (for standalone page)
+        // or when tab is shown (for tabbed interface)
         const promptsTab = document.getElementById('prompts-tab');
         if (promptsTab) {
             promptsTab.addEventListener('shown.bs.tab', () => {
                 this.loadPrompts();
             });
+        }
+
+        // If prompts list exists on page load, load prompts immediately
+        const promptsList = document.getElementById('promptsList');
+        if (promptsList) {
+            this.loadPrompts();
         }
 
         // Filters
