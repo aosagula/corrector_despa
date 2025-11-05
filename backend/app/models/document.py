@@ -149,6 +149,7 @@ class AttributeExtractionCoordinate(Base):
     y2 = Column(Integer, nullable=False)  # Coordenada inferior derecha Y
     label = Column(String(100), nullable=False)  # Nombre del atributo para esta coordenada
     description = Column(Text)  # Descripción de qué se extrae en esta área
+    data_type = Column(String(20), default='text')  # Tipo de dato: text, number, date
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
@@ -172,3 +173,17 @@ class PromptTemplate(Base):
     json_schema = Column(JSON)  # Esquema JSON de ejemplo para la respuesta (si response_format='json')
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+
+class ExtractedAttributes(Base):
+    """Modelo para almacenar atributos extraídos de documentos provisorios"""
+    __tablename__ = "extracted_attributes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    provisional_document_id = Column(Integer, ForeignKey("provisional_documents.id"), nullable=False)
+    extracted_data = Column(JSON, nullable=False)  # JSON con todos los atributos extraídos por tipo de página
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Relaciones
+    provisional_document = relationship("ProvisionalDocument")

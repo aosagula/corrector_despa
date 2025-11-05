@@ -205,6 +205,7 @@ async def extract_data_by_coordinates(
 
             coordinates_by_page_type[coord.page_type_id].append({
                 'label': coord.label,
+                'data_type': coord.data_type if hasattr(coord, 'data_type') else 'text',
                 'x1': coord.x1,
                 'y1': coord.y1,
                 'x2': coord.x2,

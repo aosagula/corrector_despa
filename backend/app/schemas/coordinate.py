@@ -13,6 +13,7 @@ class CoordinateBase(BaseModel):
     y2: int = Field(..., gt=0, description="Coordenada Y inferior derecha")
     label: str = Field(..., max_length=100, description="Etiqueta del atributo")
     description: Optional[str] = Field(None, description="Descripción del área de extracción")
+    data_type: Optional[str] = Field('text', description="Tipo de dato: text, number, date")
 
 
 class CoordinateCreate(CoordinateBase):
@@ -29,6 +30,7 @@ class CoordinateUpdate(BaseModel):
     y2: Optional[int] = Field(None, gt=0)
     label: Optional[str] = Field(None, max_length=100)
     description: Optional[str] = None
+    data_type: Optional[str] = None
 
 
 class CoordinateResponse(CoordinateBase):

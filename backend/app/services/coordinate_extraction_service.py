@@ -14,6 +14,24 @@ class CoordinateExtractionService:
     """Servicio para extraer texto de regiones específicas de imágenes usando coordenadas"""
 
     @staticmethod
+    def _get_tesseract_config(data_type: str) -> str:
+        """
+        Obtiene la configuración de Tesseract según el tipo de dato
+
+        Args:
+            data_type: Tipo de dato ('text', 'number', 'date')
+
+        Returns:
+            String de configuración para Tesseract
+        """
+        configs = {
+            'number': '--psm 7 -c tessedit_char_whitelist=0123456789.,- outputbase digits',
+            'date': '--psm 7 -c tessedit_char_whitelist=0123456789/-',
+            'text': '--psm 6'  # Asume un bloque de texto uniforme
+        }
+        return configs.get(data_type, '--psm 6')
+
+    @staticmethod
     def extract_from_coordinates(
         image_bytes: bytes,
         coordinates: List[Dict]
@@ -26,6 +44,7 @@ class CoordinateExtractionService:
             coordinates: Lista de diccionarios con formato:
                 {
                     'label': 'nombre_atributo',
+                    'data_type': 'text|number|date',  # Opcional
                     'x1': int,
                     'y1': int,
                     'x2': int,
@@ -43,6 +62,7 @@ class CoordinateExtractionService:
 
             for coord in coordinates:
                 label = coord['label']
+                data_type = coord.get('data_type', 'text')
                 x1, y1, x2, y2 = coord['x1'], coord['y1'], coord['x2'], coord['y2']
 
                 # Validar coordenadas
@@ -54,11 +74,14 @@ class CoordinateExtractionService:
                 # Recortar región de interés
                 roi = image.crop((x1, y1, x2, y2))
 
-                # Extraer texto usando Tesseract
-                text = pytesseract.image_to_string(roi, lang='spa').strip()
+                # Obtener configuración de Tesseract según tipo de dato
+                tesseract_config = CoordinateExtractionService._get_tesseract_config(data_type)
+
+                # Extraer texto usando Tesseract con configuración específica
+                text = pytesseract.image_to_string(roi, lang='spa', config=tesseract_config).strip()
 
                 results[label] = text
-                logger.debug(f"Extraído '{label}': {text[:50]}...")
+                logger.debug(f"Extraído '{label}' (tipo: {data_type}): {text[:50]}...")
 
             return results
 

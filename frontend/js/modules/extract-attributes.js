@@ -65,22 +65,32 @@ async function extractAttributes() {
         progressText.textContent = '10%';
         progressStatus.textContent = 'Detectando tipos de páginas...';
 
-        const detectionResponse = await fetch(`${API_BASE_URL}/provisional-documents/${currentProvisionalId}/detect-pages`, {
-            method: 'POST'
-        });
+        const detectionResponse = await fetch(`${API_BASE_URL}/documents/provisional/${currentProvisionalId}/detect-pages`);
 
         if (!detectionResponse.ok) {
             throw new Error('Error al detectar tipos de páginas');
         }
 
         const detectionData = await detectionResponse.json();
-        const pages = detectionData.pages || [];
+        const allPages = detectionData.pages || [];
+
+        // Filter only pages with detected type (page_type_id must exist)
+        const pages = allPages.filter(page => page.page_type_id);
+        const skippedPages = allPages.length - pages.length;
+
+        if (skippedPages > 0) {
+            console.log(`Omitiendo ${skippedPages} página(s) sin tipo detectado`);
+        }
+
+        if (pages.length === 0) {
+            throw new Error('No hay páginas con tipo detectado. Configure los tipos de página primero.');
+        }
 
         progressBar.style.width = '30%';
         progressText.textContent = '30%';
-        progressStatus.textContent = `${pages.length} páginas detectadas. Extrayendo atributos...`;
+        progressStatus.textContent = `${pages.length} páginas con tipo detectado. Extrayendo atributos...`;
 
-        // Step 2: Extract attributes for each page
+        // Step 2: Extract attributes for each page with detected type
         const extractedPages = [];
         const totalPages = pages.length;
 
@@ -92,7 +102,7 @@ async function extractAttributes() {
             progressStatus.textContent = `Extrayendo atributos de página ${i + 1} de ${totalPages} (${page.page_type_display_name})...`;
 
             // Extract attributes for this page
-            const extractResponse = await fetch(`${API_BASE_URL}/provisional-documents/${currentProvisionalId}/extract-page-attributes`, {
+            const extractResponse = await fetch(`${API_BASE_URL}/documents/provisional/${currentProvisionalId}/extract-page-attributes`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -195,10 +205,10 @@ async function saveExtractedAttributes() {
     saveBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Guardando...';
 
     try {
-        const response = await fetch(`${API_BASE_URL}/provisional-documents/${currentProvisionalId}/save-extracted-attributes`, {
+        const response = await fetch(`${API_BASE_URL}/documents/provisional/${currentProvisionalId}/save-extracted-attributes`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(extractedData)
+            body: JSON.stringify({ extracted_data: extractedData })
         });
 
         if (!response.ok) {

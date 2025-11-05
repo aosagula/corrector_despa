@@ -616,6 +616,7 @@ async function saveAttribute() {
                 await DocumentAPI.updateCoordinate(existingAttr.id, {
                     label: attributeData.label,
                     description: attributeData.description,
+                    data_type: attributeData.data_type,
                     x1: attributeData.x1,
                     y1: attributeData.y1,
                     x2: attributeData.x2,
@@ -857,6 +858,7 @@ async function saveAllAttributes() {
                 attribute_id: attribute.id,
                 label: attr.label,
                 description: attr.description || null,
+                data_type: attr.data_type || 'text',
                 x1: Math.round(attr.x1),
                 y1: Math.round(attr.y1),
                 x2: Math.round(attr.x2),

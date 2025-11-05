@@ -1,3 +1,6 @@
+// Cache busting version - updates automatically
+const ASSETS_VERSION = Date.now();
+
 // API Configuration
 const API_CONFIG = {
     // Detección automática del backend según el entorno

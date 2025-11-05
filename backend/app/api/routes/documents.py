@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 from ...core.database import get_db
 from ...core.config import settings
-from ...models.document import CommercialDocument, ProvisionalDocument, ProvisionalDocumentImage
+from ...models.document import CommercialDocument, ProvisionalDocument, ProvisionalDocumentImage, ExtractedAttributes, AttributeExtractionCoordinate, PageType
 from ...schemas.document import (
     CommercialDocumentResponse,
     ProvisionalDocumentResponse,
@@ -22,6 +22,7 @@ from ...services.llama_service import llama_service
 from ...services.vision_service import vision_service
 from ...services.pdf_to_image_service import pdf_to_image_service
 from ...services.page_type_detection_service import PageTypeDetectionService
+from ...services.coordinate_extraction_service import coordinate_extraction_service
 
 router = APIRouter()
 
@@ -591,5 +592,151 @@ async def detect_provisional_pages(
         raise
     except Exception as e:
         logger.error(f"Error detectando páginas de documento provisorio {document_id}: {str(e)}\n{traceback.format_exc()}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+
+
+@router.post("/provisional/{document_id}/extract-page-attributes")
+async def extract_page_attributes(
+    document_id: int,
+    request_data: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    Extrae atributos de una página específica usando coordenadas configuradas
+
+    Body:
+        page_number: int - Número de página
+        page_type_id: int - ID del tipo de página detectado
+    """
+    try:
+        page_number = request_data.get("page_number")
+        page_type_id = request_data.get("page_type_id")
+
+        if not page_number or not page_type_id:
+            raise HTTPException(status_code=400, detail="Se requieren page_number y page_type_id")
+
+        # Verificar que el documento existe
+        document = db.query(ProvisionalDocument).filter(ProvisionalDocument.id == document_id).first()
+        if not document:
+            raise HTTPException(status_code=404, detail="Documento no encontrado")
+
+        # Obtener la imagen de la página
+        image = db.query(ProvisionalDocumentImage).filter(
+            ProvisionalDocumentImage.provisional_document_id == document_id,
+            ProvisionalDocumentImage.page_number == page_number
+        ).first()
+
+        if not image:
+            raise HTTPException(status_code=404, detail=f"Imagen de página {page_number} no encontrada")
+
+        # Obtener coordenadas configuradas para este tipo de página
+        coordinates = db.query(AttributeExtractionCoordinate).filter(
+            AttributeExtractionCoordinate.page_type_id == page_type_id
+        ).all()
+
+        if not coordinates:
+            logger.warning(f"No hay coordenadas configuradas para page_type_id={page_type_id}")
+            return {
+                "page_number": page_number,
+                "page_type_id": page_type_id,
+                "attributes": {}
+            }
+
+        # Convertir coordenadas al formato esperado por el servicio
+        coords_list = [
+            {
+                "label": coord.label,
+                "data_type": coord.data_type if hasattr(coord, 'data_type') else 'text',
+                "x1": coord.x1,
+                "y1": coord.y1,
+                "x2": coord.x2,
+                "y2": coord.y2
+            }
+            for coord in coordinates
+        ]
+
+        # Extraer atributos usando el servicio de coordenadas
+        extracted_attributes = coordinate_extraction_service.extract_from_coordinates(
+            image.image_data,
+            coords_list
+        )
+
+        return {
+            "page_number": page_number,
+            "page_type_id": page_type_id,
+            "attributes": extracted_attributes
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error extrayendo atributos de página {page_number}: {str(e)}\n{traceback.format_exc()}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
+
+
+@router.post("/provisional/{document_id}/save-extracted-attributes")
+async def save_extracted_attributes(
+    document_id: int,
+    request_data: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    Guarda los atributos extraídos de un documento provisorio
+
+    Body:
+        extracted_data: dict - JSON con todos los atributos extraídos organizados por página
+    """
+    try:
+        extracted_data = request_data.get("extracted_data")
+
+        if not extracted_data:
+            raise HTTPException(status_code=400, detail="Se requiere extracted_data")
+
+        # Verificar que el documento existe
+        document = db.query(ProvisionalDocument).filter(ProvisionalDocument.id == document_id).first()
+        if not document:
+            raise HTTPException(status_code=404, detail="Documento no encontrado")
+
+        # Verificar si ya existen atributos extraídos para este documento
+        existing = db.query(ExtractedAttributes).filter(
+            ExtractedAttributes.provisional_document_id == document_id
+        ).first()
+
+        if existing:
+            # Actualizar existente
+            existing.extracted_data = extracted_data
+            existing.updated_at = func.now()
+            db.commit()
+            db.refresh(existing)
+
+            return {
+                "message": "Atributos actualizados exitosamente",
+                "id": existing.id,
+                "document_id": document_id,
+                "extracted_data": existing.extracted_data
+            }
+        else:
+            # Crear nuevo registro
+            new_extraction = ExtractedAttributes(
+                provisional_document_id=document_id,
+                extracted_data=extracted_data
+            )
+            db.add(new_extraction)
+            db.commit()
+            db.refresh(new_extraction)
+
+            return {
+                "message": "Atributos guardados exitosamente",
+                "id": new_extraction.id,
+                "document_id": document_id,
+                "extracted_data": new_extraction.extracted_data
+            }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error guardando atributos extraídos: {str(e)}\n{traceback.format_exc()}")
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
