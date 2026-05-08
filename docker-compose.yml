@@ -56,6 +56,7 @@ services:
       # Ollama
       OLLAMA_HOST: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-phi3}
+      OLLAMA_MULTIMODAL: ${OLLAMA_MULTIMODAL:-false}
       # API
       API_V1_STR: ${API_V1_STR:-/api/v1}
       PROJECT_NAME: ${PROJECT_NAME:-Corrector de Documentos}

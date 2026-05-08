@@ -53,19 +53,25 @@ async def upload_commercial_document(
         raise HTTPException(status_code=500, detail=f"Error guardando archivo: {str(e)}")
 
     try:
-        # Extraer texto
-        text_content = ocr_service.extract_text(str(file_path), file_extension)
+        if settings.OLLAMA_MULTIMODAL:
+            # Pipeline multimodal: imágenes directamente al modelo, sin Tesseract
+            images = ocr_service.get_images(str(file_path), file_extension)
+            if not images:
+                raise HTTPException(status_code=400, detail="No se pudieron extraer imágenes del documento")
+            classification_result = llama_service.classify_document_multimodal(images, db)
+            document_type = classification_result.get("document_type", "desconocido")
+            confidence = classification_result.get("confidence", 0.0)
+            extracted_data = llama_service.extract_structured_data_multimodal(images, document_type, db)
+        else:
+            # Pipeline de texto: OCR (Tesseract) → modelo de texto
+            text_content = ocr_service.extract_text(str(file_path), file_extension)
+            if not text_content:
+                raise HTTPException(status_code=400, detail="No se pudo extraer texto del documento")
+            classification_result = llama_service.classify_document(text_content, db)
+            document_type = classification_result.get("document_type", "desconocido")
+            confidence = classification_result.get("confidence", 0.0)
+            extracted_data = llama_service.extract_structured_data(text_content, document_type, db)
 
-        if not text_content:
-            raise HTTPException(status_code=400, detail="No se pudo extraer texto del documento")
-
-        # Clasificar documento
-        classification_result = llama_service.classify_document(text_content, db)
-        document_type = classification_result.get("document_type", "desconocido")
-        confidence = classification_result.get("confidence", 0.0)
-
-        # Extraer datos estructurados
-        extracted_data = llama_service.extract_structured_data(text_content, document_type, db)
         extracted_data["classification_reasoning"] = classification_result.get("reasoning", "")
 
         # Guardar en base de datos
@@ -127,14 +133,16 @@ async def upload_provisional_document(
         raise HTTPException(status_code=500, detail=f"Error guardando archivo: {str(e)}")
 
     try:
-        # Extraer texto
-        text_content = ocr_service.extract_text(str(file_path), file_extension)
-
-        if not text_content:
-            raise HTTPException(status_code=400, detail="No se pudo extraer texto del documento")
-
-        # Extraer datos estructurados (asumiendo que es una factura genérica)
-        extracted_data = llama_service.extract_structured_data(text_content, "factura", db)
+        if settings.OLLAMA_MULTIMODAL:
+            images = ocr_service.get_images(str(file_path), file_extension)
+            if not images:
+                raise HTTPException(status_code=400, detail="No se pudieron extraer imágenes del documento")
+            extracted_data = llama_service.extract_structured_data_multimodal(images, "factura", db)
+        else:
+            text_content = ocr_service.extract_text(str(file_path), file_extension)
+            if not text_content:
+                raise HTTPException(status_code=400, detail="No se pudo extraer texto del documento")
+            extracted_data = llama_service.extract_structured_data(text_content, "factura", db)
 
         # Guardar en base de datos
         db_document = ProvisionalDocument(

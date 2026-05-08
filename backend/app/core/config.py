@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     # Llama/Ollama Settings
     OLLAMA_HOST: str
     OLLAMA_MODEL: str
+    # True → modo multimodal (ej. gemma3): pasa imágenes directamente al modelo, sin Tesseract
+    OLLAMA_MULTIMODAL: bool = False
 
     # File Upload Settings
     UPLOAD_DIR: str
